@@ -1,0 +1,31 @@
+cell:
+  name: "Damp Stone Cell"
+  description: |
+    You wake up on a hard slab in a damp stone cell. The air is cold and smells strongly of brine and mold.
+    Iron bars block the north exit. The only other object is a cracked, moss-covered **Stone Slab** near your feet.
+    
+    [DM NOTE: The setting is intentionally sparse to encourage interacting with the two main objects (Bars, Slab).]
+  exits:
+    # EXIT LOGIC: Requires the player to find the 'shiv' and use it to 'unlock' the door.
+    north: {target_id: "hallway", locked: true, key_id: "shiv"} 
+  
+  objects:
+    - id: bars
+      name: "Iron Bars"
+      tags: ["rigid", "iron", "exit_barrier"]
+      mechanics: 
+        # HEROIC EFFORT: The check is extremely high, making success very unlikely for a starting player.
+        break_attempt: {stat: "str", dc: 25}
+    - id: stone_slab
+      name: "Loose Stone Slab"
+      tags: ["conceals_item", "heavy", "interactable"]
+      mechanics: 
+        # PUZZLE SOLUTION: This is the intended path to finding the key/shiv.
+        check_to_move: {stat: "str", dc: 15}
+        loot: "shiv" # The successful check reveals the shiv.
+        
+hallway:
+  name: "Corridor"
+  description: "A dimly lit corridor, silent except for the drip of water. Torches flicker weakly on the walls."
+  exits:
+    south: {target_id: "cell", locked: false}

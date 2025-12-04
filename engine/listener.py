@@ -4,10 +4,6 @@ from openai import OpenAI
 
 class Listener:
     def __init__(self, model_name="gpt-5-nano"):
-        """
-        The Listener translates Natural Language -> JSON Commands.
-        We inject the model_name so it can be controlled via config.yaml.
-        """
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = model_name 
 
@@ -22,12 +18,12 @@ class Listener:
         RULES:
         1. Output valid JSON only.
         2. The root key MUST be "tool", followed by "parameters".
-        3. Do not use "name" or "function". Use "tool".
+        3. For 'resolve_check' or 'combat_action', you MUST identify the object or entity being acted upon and pass it as the 'target_id' parameter. If the user input mentions an object, extract it.
         
-        EXAMPLE OUTPUT:
+        EXAMPLE OUTPUT (Context Extraction):
         {{
           "tool": "resolve_check",
-          "parameters": {{ "stat": "strength", "target_dc": 15 }}
+          "parameters": {{ "stat": "strength", "target_dc": 15, "target_id": "bars" }}
         }}
         """
 
@@ -38,7 +34,6 @@ class Listener:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_input}
                 ],
-                # GPT-5 Nano supports 'json_object' for guaranteed structure
                 response_format={"type": "json_object"}, 
                 temperature=1
             )
@@ -47,6 +42,5 @@ class Listener:
             return json.loads(content)
 
         except Exception as e:
-            # Fallback to prevent crash
             print(f"[Listener Error] {e}")
             return {"tool": "error", "reason": str(e)}

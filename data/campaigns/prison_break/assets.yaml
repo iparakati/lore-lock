@@ -1,0 +1,33 @@
+---
+# ==========================================
+# CAMPAIGN ASSETS: ITEMS & MECHANICS
+# ==========================================
+
+items:
+  shiv: 
+    name: "Rusty Shiv"
+    tags: ["improvised", "weapon", "key_tool"]
+    description: "A jagged piece of metal, sharp enough to cut but not meant for heavy fighting."
+    mechanics: 
+      damage: "1d4"
+      tool_effect: "Can be used to bypass simple locks (DC 15 Dexterity Check)."
+  rations: 
+    name: "Moldy Rations"
+    tags: ["consumable", "gross"]
+    description: "Dry, flavorless nutrient bars. Barely edible."
+    mechanics: {heal: 1, status_effect: "Nauseous (1 turn)"}
+
+# ==========================================
+# CAMPAIGN ASSETS: NON-PLAYER CHARACTERS
+# ==========================================
+
+npcs:
+  guard: 
+    name: "Sentry Theron"
+    tags: ["human", "hostile", "armored"]
+    description: "A massive, dull-witted guard who follows orders precisely."
+    stats: 
+      hp: 15
+      ac: 14
+      perception: 14
+    combat_tactic: "Stabs nearest target. Retreats if HP drops below 5."

@@ -1,0 +1,14 @@
+id: prison_break
+title: "The Iron Gauntlet"
+starting_scene_id: C1_S1_CELL_START # Updated to use new ID standard
+genre: "Gritty Survival"
+tone: "Tense and serious"
+
+# ==========================================
+# DM PRIMER: THE CAMPAIGN HOOK (Why are they here?)
+# ==========================================
+hook: |
+  The player is a political prisoner, captured for opposing the iron-fisted Warden. 
+  The immediate goal is not revenge, but self-preservation: ESCAPE THE PRISON FACILITY.
+  The facility is built into a cliffside, meaning failure to escape quietly can lead to
+  deadly consequences (e.g., being thrown off the cliff).
