@@ -1,4 +1,6 @@
 stories/games/*.py
-stories/tests/*.py
+tests/stories/*.py
 __pycache__/
 *.pyc
+.env
+*.save

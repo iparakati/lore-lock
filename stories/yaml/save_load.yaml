@@ -1,0 +1,32 @@
+title: "Save Load Test"
+purpose: "Test persistence of game state via save and load commands."
+scenes:
+  - id: "Room A"
+    name: "Room A"
+    description: "Start here."
+    contents:
+      - id: "coin"
+        name: "coin"
+        kind: "thing"
+    exits:
+      north:
+        target: "Room B"
+  - id: "Room B"
+    name: "Room B"
+    description: "End here."
+    exits:
+      south:
+        target: "Room A"
+start_room: "Room A"
+test_sequence:
+  - "take coin"
+  - "north"
+  - "save"
+  - "drop coin"
+  - "south"
+  - "load"
+  - "look"
+  - "inventory"
+win_condition:
+  type: "location"
+  target: "Room B"
