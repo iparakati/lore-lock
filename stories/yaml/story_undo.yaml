@@ -1,0 +1,23 @@
+title: "Undo Test"
+purpose: "Test the undo functionality to ensure game state can be reverted."
+
+scenes:
+  - id: "Room A"
+    name: "Room A"
+    contents:
+      - id: "ball"
+        name: "ball"
+
+start_room: "Room A"
+
+test_sequence:
+  - "look"
+  - "take ball"
+  - "i" # Should have ball
+  - "undo"
+  - "i" # Should be empty
+  - "look" # Ball should be in room
+
+win_condition:
+  type: "location"
+  target: "Room A"

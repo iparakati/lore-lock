@@ -34,6 +34,7 @@ The engine closely mimics the core architecture of Inform 7:
 
 To browse and play any story in `stories/yaml/` without generating files:
 
+Run the game:
 ```bash
 python play.py
 ```
