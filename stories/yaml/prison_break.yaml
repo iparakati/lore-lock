@@ -1,0 +1,87 @@
+title: "Prison Break"
+author: "Lore Lock"
+purpose: "Demonstrate a complete escape room scenario involving puzzles (pushable slab), hidden items (shiv), containment (box), NPC interaction (guard), and lockable doors."
+
+scenes:
+  - id: "Damp Stone Cell"
+    name: "Damp Stone Cell"
+    description: "You wake up on a hard slab in a damp stone cell. The air is cold."
+    contents:
+      - id: "stone slab"
+        kind: "supporter"
+        name: "Stone Slab"
+        aliases: ["slab"]
+        description: "A cracked stone slab."
+        properties: { fixed: true, enterable: true }
+        interactions:
+          - verb: "push"
+            type: "before"
+            condition: "items['rusty shiv'].location_id == 'off-stage'"
+            message: "You shift the heavy stone slab. Underneath, you discover a rusty shiv!"
+            actions:
+              - { type: "move", target: "rusty shiv", destination: "current_location" }
+
+      - id: "moldy box"
+        kind: "container"
+        name: "moldy box"
+        aliases: ["box"]
+        description: "A rotting wooden box."
+        properties: { open: false, transparent: false }
+
+      - id: "guard"
+        kind: "person"
+        name: "Guard"
+        description: "A bored guard stands outside the bars."
+        topics:
+            "freedom": "Hah! You'll rot here."
+            "food": "No soup for you."
+
+    exits:
+      north:
+        target: "Corridor"
+        door: "iron bars"
+
+  - id: "Corridor"
+    name: "The Corridor"
+    description: "Freedom... almost."
+    exits:
+      south:
+        target: "Damp Stone Cell"
+        door: "iron bars"
+
+off_stage:
+  - id: "rusty shiv"
+    name: "rusty shiv"
+    aliases: ["shiv"]
+    description: "A jagged piece of metal."
+
+doors:
+  - id: "iron bars"
+    name: "iron bars"
+    aliases: ["bars"]
+    description: "Thick iron bars."
+    locked: true
+    key: "rusty shiv"
+
+start_room: "Damp Stone Cell"
+
+test_sequence:
+  - "look"
+  - "examine slab"
+  - "push slab"
+  - "take shiv"
+  - "open box"
+  - "put shiv in box"
+  - "close box"
+  - "look"
+  - "open box"
+  - "take shiv"
+  - "ask guard about freedom"
+  - "unlock bars with shiv"
+  - "open bars"
+  - "north"
+  - "look"
+
+win_condition:
+  type: "location"
+  target: "Corridor"

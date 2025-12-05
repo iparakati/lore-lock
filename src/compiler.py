@@ -14,6 +14,7 @@ import random
 
 # Data injected by compiler
 GAME_DATA = %s
+STORY_ID = "%s"
 
 DM_CONFIG_FILE = "dm_config.yaml"
 
@@ -806,6 +807,7 @@ class World:
         if verb == 'wait' or text == 'z': print("Time passes."); return
         if verb == 'save': self.save_game(); return
         if verb == 'load': self.load_game(); return
+        if verb == 'menu': print("Exiting to menu..."); return "menu"
 
         # Complex verbs
         # Patterns:
@@ -862,34 +864,43 @@ class World:
         else:
             print("I didn't understand that.")
 
-    def save_game(self, filename="savegame.json"):
-        # Basic serialization
+    def save_game(self):
+        filename = f"{STORY_ID}.save"
         state = {
             'player_loc': self.entities['player'].location_id,
             'entities': {eid: e.to_state() for eid, e in self.entities.items()}
         }
         with open(filename, 'w') as f: json.dump(state, f)
-        print("Saved.")
+        print(f"Saved to {filename}.")
 
-    def load_game(self, filename="savegame.json"):
+    def load_game(self):
+        filename = f"{STORY_ID}.save"
         try:
             with open(filename, 'r') as f: state = json.load(f)
             self.move_entity('player', state['player_loc'])
             for eid, s in state['entities'].items():
                 if eid in self.entities: self.entities[eid].load_state(s)
-            print("Loaded.")
+            print(f"Loaded from {filename}.")
             self.look()
-        except: print("Load failed.")
+        except: print("No save file found.")
 
 def main():
     game = World(GAME_DATA)
-    print("Welcome.")
+
+    title = GAME_DATA.get('title', 'Untitled')
+    author = GAME_DATA.get('author', 'Anonymous')
+
+    print(f"\\n\\"{title}\\"")
+    print(f"An Interactive Fiction by {author}")
+    print("Release 1 / Lore Lock Engine\\n")
+
     game.look()
     while True:
         try:
             cmd = input("> ")
             if cmd == "quit": break
-            game.parse(cmd)
+            res = game.parse(cmd)
+            if res == "menu": break
         except EOFError: break
 
 if __name__ == "__main__":
@@ -939,6 +950,14 @@ if __name__ == '__main__':
     unittest.main()
 """
 
+def generate_game_code(data, story_id):
+    return TEMPLATE % (repr(data), story_id)
+
+def generate_test_code(data, module_name):
+    test_commands = data.get('test_sequence', [])
+    win_condition = data.get('win_condition', {})
+    return TEST_TEMPLATE % (module_name, module_name, module_name, module_name, repr(test_commands), repr(win_condition))
+
 def compile_game(yaml_file):
     with open(yaml_file, 'r') as f:
         data = yaml.safe_load(f)
@@ -950,27 +969,24 @@ def compile_game(yaml_file):
         print(f"Compiling '{data.get('title', 'Untitled')}' - Purpose: {data['purpose']}")
 
     # Generate Game Code
-    game_code = TEMPLATE % (repr(data))
+    game_code = generate_game_code(data, base_name)
 
     # Ensure directories exist
     os.makedirs('stories/games', exist_ok=True)
     os.makedirs('stories/tests', exist_ok=True)
 
-    game_filename = os.path.join('stories/games', "game_" + base_name.replace("story_", "") + ".py")
+    game_filename = os.path.join('stories/games', "game_" + base_name + ".py")
     with open(game_filename, 'w') as f:
         f.write(game_code)
     print(f"Generated {game_filename}")
 
     # Generate Test Code
-    test_commands = data.get('test_sequence', [])
-    win_condition = data.get('win_condition', {})
-
     # Module name is just the filename without extension
-    module_name = "game_" + base_name.replace("story_", "")
+    module_name = "game_" + base_name
 
-    test_code = TEST_TEMPLATE % (module_name, module_name, module_name, module_name, repr(test_commands), repr(win_condition))
+    test_code = generate_test_code(data, module_name)
 
-    test_filename = os.path.join('stories/tests', "test_" + base_name.replace("story_", "") + ".py")
+    test_filename = os.path.join('stories/tests', "test_" + base_name + ".py")
     with open(test_filename, 'w') as f:
         f.write(test_code)
     print(f"Generated {test_filename}")

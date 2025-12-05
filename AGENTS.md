@@ -50,7 +50,7 @@ The core of the engine replaces simple `if/else` checks with a Rulebook system.
 To add a new story or test case, create a new YAML file in `stories/yaml/`.
 
 ### Naming Convention
-*   **File Name:** `story_<name>.yaml` (e.g., `story_mystery.yaml`).
+*   **File Name:** `<name>.yaml` (e.g., `mystery.yaml`).
 
 ### YAML Structure
 The YAML file must include the following metadata to ensure the compiler can generate both the game and the test suite:
