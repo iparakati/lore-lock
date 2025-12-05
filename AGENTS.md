@@ -117,10 +117,12 @@ The `AIClient` remains a fallback. If the strict parser fails, the AI attempts t
 
 Since the AI Client uses paid APIs (e.g., OpenAI), we avoid running live AI calls in the standard automated test suite (mocking is used instead). However, developers should verify the AI integration manually when working on the parser.
 
+**Note:** As of 12/5/2025, `gpt-5-nano` is available and should be used. It requires `temperature: 1`.
+
 ### Instructions
 
-1.  **Create a Temporary Story:**
-    Create a file named `stories/yaml/live_test.yaml` (or similar). Do NOT commit this file.
+1.  **Create a Temporary Story or Script:**
+    Create a file named `stories/yaml/live_test.yaml` (or similar), or a python script that imports the generated game. Do NOT commit these files.
     Example content:
     ```yaml
     title: "Live AI Test"
