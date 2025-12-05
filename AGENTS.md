@@ -112,3 +112,50 @@ Use these as references or update them to cover new edge cases:
 
 ## 6. AI Integration
 The `AIClient` remains a fallback. If the strict parser fails, the AI attempts to map the user's sentence to a strict command format.
+
+## 7. Live AI Testing
+
+Since the AI Client uses paid APIs (e.g., OpenAI), we avoid running live AI calls in the standard automated test suite (mocking is used instead). However, developers should verify the AI integration manually when working on the parser.
+
+### Instructions
+
+1.  **Create a Temporary Story:**
+    Create a file named `stories/yaml/live_test.yaml` (or similar). Do NOT commit this file.
+    Example content:
+    ```yaml
+    title: "Live AI Test"
+    purpose: "Verify AI fallback."
+    scenes:
+      - id: "Lab"
+        name: "Lab"
+        contents:
+          - id: "slab"
+            name: "slab"
+    start_room: "Lab"
+    # This command relies on AI to map 'examing' -> 'examine'
+    test_sequence:
+      - "examing slab"
+    win_condition:
+      type: "location"
+      target: "Lab"
+    ```
+
+2.  **Compile the Story:**
+    ```bash
+    python src/compiler.py stories/yaml/live_test.yaml
+    ```
+
+3.  **Run the Game Manually:**
+    Do not run the generated test script (it mocks the AI). Run the game directly:
+    ```bash
+    python stories/games/game_live_test.py
+    ```
+    Enter commands like `examing slab` and verify the AI output (e.g., `[AI Interpreted: examine slab]`).
+
+4.  **Clean Up:**
+    After verification, delete the temporary files to prevent accidental commits:
+    ```bash
+    rm stories/yaml/live_test.yaml
+    rm stories/games/game_live_test.py
+    rm tests/stories/test_live_test.py
+    ```

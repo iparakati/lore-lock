@@ -59,7 +59,7 @@ class AIClient:
         temperature = self.config.get('temperature', 1)
 
         context_str = "Translate the user's natural language into one of these standard formats:\n"
-        context_str += "- look\n- n, s, e, w\n- take [object]\n- drop [object]\n- put [object] in [container]\n"
+        context_str += "- look\n- examine [object]\n- n, s, e, w\n- take [object]\n- drop [object]\n- put [object] in [container]\n"
         context_str += "- put [object] on [supporter]\n- open [object]\n- close [object]\n"
         context_str += "- lock [object] with [key]\n- unlock [object] with [key]\n- ask [person] about [topic]\n- tell [person] about [topic]\n"
         context_str += "- wear [object]\n- eat [object]\n- enter [object]"
@@ -255,11 +255,16 @@ class Person(Thing):
 class Rulebook:
     def __init__(self, world):
         self.world = world
+        self.STANDARD_VERBS = {'take', 'drop', 'put', 'enter', 'inventory', 'look', 'examine', 'open', 'close', 'lock', 'unlock', 'wear', 'eat', 'ask', 'tell', 'talk'}
 
     def process(self, action):
         # 1. Before Rules (Custom interactions)
         if self.run_custom_rules(action, 'before'): return True # Stopped
         if self.run_custom_rules(action, 'instead'): return True # Stopped
+
+        # Check if standard verb
+        if action.verb not in self.STANDARD_VERBS:
+            return False
 
         # 2. Check Rules (Standard logic)
         if not self.check(action): return True # Failed check
@@ -406,6 +411,12 @@ class Rulebook:
              if action.noun.kind != 'person': print("You can't talk to that."); return False
              return True
 
+        if verb == 'talk':
+             target = action.noun or action.second
+             if not target: print("Talk to who?"); return False
+             if target.kind != 'person': print("You can't talk to that."); return False
+             return True
+
         if verb == 'go':
              # Handled in parser usually, but if we map 'go north' -> verb='go', noun='north'
              # Or verb='north'. Let's stick to verb='north' for simplicity in parser, or check standard map.
@@ -472,6 +483,10 @@ class Rulebook:
         if verb == 'tell':
              # Simple echo for now
              print(f"You tell {action.noun.name} about {action.topic}. They listen politely.")
+
+        if verb == 'talk':
+             target = action.noun or action.second
+             print(f"To converse, try 'ask {target.name} about [topic]' or 'tell {target.name} about [topic]'.")
 
         if verb == 'look':
             self.world.look()
@@ -674,6 +689,7 @@ class World:
         return True
 
     def find_in_scope(self, name):
+        if not name: return None
         scope = self.get_scope()
         # 1. Exact match
         for ent in scope:
@@ -822,7 +838,7 @@ class World:
                 except: pass
 
         # Prepositions for PUT / UNLOCK
-        preps = [' in ', ' on ', ' with ']
+        preps = [' in ', ' on ', ' with ', ' to ']
         prep_found = None
         for p in preps:
              if p in text:
@@ -841,16 +857,16 @@ class World:
                 noun = self.find_in_scope(noun_str)
                 second = self.find_in_scope(second_str)
 
-                self.rulebook.process(Action(verb, noun=noun, second=second))
-                return
+                if self.rulebook.process(Action(verb, noun=noun, second=second)):
+                    return
             except: pass
 
         # SVO
         if len(tokens) > 1:
             noun_str = " ".join(tokens[1:])
             noun = self.find_in_scope(noun_str)
-            self.rulebook.process(Action(verb, noun=noun))
-            return
+            if self.rulebook.process(Action(verb, noun=noun)):
+                return
 
         # AI Fallback
         valid_cmds = ["look", "inventory", "take [item]", "drop [item]", "open [item]", "put [item] in [item]"]
