@@ -28,10 +28,11 @@ class AIClient:
         self._load_env()
         self.api_key = os.environ.get("OPENAI_API_KEY")
 
-        if self.api_key and os.path.exists(config_file):
+        config_path = self._find_file(config_file)
+        if self.api_key and config_path:
             try:
                 import yaml
-                with open(config_file, 'r') as f:
+                with open(config_path, 'r') as f:
                     self.config = yaml.safe_load(f)
                 self.enabled = True
             except ImportError:
@@ -41,10 +42,20 @@ class AIClient:
         elif not self.api_key:
             pass
 
+    def _find_file(self, filename):
+        if os.path.exists(filename): return filename
+        # Check parent directories (up to 3 levels)
+        path = filename
+        for _ in range(3):
+            path = os.path.join("..", path)
+            if os.path.exists(path): return path
+        return None
+
     def _load_env(self):
-        if os.path.exists(".env"):
+        env_path = self._find_file(".env")
+        if env_path:
             try:
-                with open(".env", "r") as f:
+                with open(env_path, "r") as f:
                     for line in f:
                         line = line.strip()
                         if not line or line.startswith("#"): continue
