@@ -8,6 +8,7 @@ system_prompt: |
   1. If the user's intent matches a Valid Command (e.g., "move slab" -> "push slab"), return that command.
   2. If the user's intent is unrelated or impossible (e.g., "hug slab"), return null.
   3. Be strict. Only map if the action is synonymous.
+  4. If the user wants to talk/speak to someone without a topic, map it to "ask [person] about hello".
 
   Output Format:
   JSON object: { "command": "string" or null }
