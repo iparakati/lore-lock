@@ -11,65 +11,104 @@ class Narrator:
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = model_name
 
-    def generate_narration(self, director_result, original_intent=""): 
+    def generate_narration(self, combined_payload, original_intent="", current_scene_summary=""): 
         
+        initial_event = combined_payload.get('initial_event')
+        triggered_events = combined_payload.get('triggered_events', [])
+        
+        if not initial_event:
+             return {"narration": "[Narrator Error] No initial event provided.", "updated_scene_summary": current_scene_summary}
+
         # --- 1. EXTRACT DATA FOR ROLL STRING ---
+        roll_data = initial_event.get('mechanics', {})
         
-        roll_data = director_result.get('mechanics', {})
-        context_data = director_result.get('context', {})
+        # Check for stats report explicitly, as it has special handling
+        is_stats_report = initial_event.get('event_type') == 'stats_report'
         
-        roll_total = roll_data.get('roll_total', '??')
-        die_face = roll_data.get('die_face', '??')
-        target_dc = roll_data.get('target_dc', '??')
-        outcome = roll_data.get('outcome', 'INFO')
-        stat_name = context_data.get('stat_used', 'STAT')
-        
-        try:
-            # Calculate modifier (Total - Die Face)
-            modifier = roll_total - die_face
-        except TypeError:
-            modifier = '??'
+        if is_stats_report:
+            # Stats report bypasses the standard roll display
+            roll_string = ""
+            outcome = "INFO"
+        else:
+            context_data = initial_event.get('context', {})
+            roll_total = roll_data.get('roll_total', '??')
+            die_face = roll_data.get('die_face', '??')
+            target_dc = roll_data.get('target_dc', '??')
+            outcome = roll_data.get('outcome', 'INFO')
+            stat_name = context_data.get('stat_used', 'STAT')
+            
+            try:
+                modifier = roll_total - die_face
+            except TypeError:
+                modifier = '??'
+            
+            roll_string = f"**{stat_name.upper()} Check: d20 ({die_face}) + {modifier} vs DC {target_dc} ({outcome})**"
 
-        # Construct the deterministic roll line for the output display
-        roll_string = f"**{stat_name.upper()} Check: d20 ({die_face}) + {modifier} vs DC {target_dc} ({outcome})**"
 
-        # 2. THE SYSTEM PROMPT (Strict Constraints)
+        # --- 2. COMPILE TRIGGER DESCRIPTIONS ---
+        trigger_descriptions = []
+        for event in triggered_events:
+            if event.get('event_type') == 'triggered_action':
+                desc = event.get('context', {}).get('trigger_description')
+                if desc:
+                    trigger_descriptions.append(desc)
+        
+        # --- 3. THE SYSTEM PROMPT (Memory & State) ---
         system_prompt = f"""
         ROLE: You are the Dungeon Master.
-        TASK: Narrate the outcome of the player's action based STRICTLY on the Engine Report.
+        TASK: Generate a JSON response with two keys: "narration" and "updated_scene_summary".
 
-        ### USER INTENT
-        The player originally asked to: "{original_intent}"
+        ### INPUT DATA
+        1. **CURRENT SCENE SUMMARY (MEMORY):** "{current_scene_summary}"
+        2. **PLAYER INTENT:** "{original_intent}"
+        3. **ENGINE REPORT (TRUTH):** {json.dumps(combined_payload)}
         
-        ### UNIVERSAL CONSISTENCY RULE (Anti-Hallucination)
-        * **DO NOT INVENT:** Use only the elements and tags provided in the report. If a detail is not present (e.g., color, sound, specific NPCs), assume it is absent or minimal.
-        * **BREVITY IS LAW:** Your narrative must be **1 to 2 sentences** long. This constraint overrides all temptation to elaborate.
-        * **CONTEXT FIX:** Ensure your narrative directly addresses the player's request (e.g., if they asked to 'find the shiv', confirm they found it, or confirm why they failed to find it).
+        ### NARRATION RULES (For "narration" output)
+        1. **PERSPECTIVE:** ALWAYS use the second-person ("You").
+        2. **COHESION:** Weave the check result, damage/status, and trigger descriptions ({json.dumps(trigger_descriptions)}) into one passage.
+        3. **CRITICAL RULE (PROSE):** **NEVER** use internal game terms in the final narrative. This includes: 'tag', 'mechanics', 'added', 'removed', 'outcome', 'conceals_item', 'rigid', 'heavy'. Describe physical reality only (e.g., say 'The slab is light now' instead of 'the heavy tag was removed').
+        4. **SECRET RULE:** On FAILURE, do not reveal hidden items.
+        5. **BREVITY:** 2-3 sentences.
+        6. **STATS REPORT:** If event_type is 'stats_report', list the stats, inventory, and status effects clearly. Omit the roll string.
         
+        ### MEMORY UPDATE RULES (For "updated_scene_summary" output)
+        1. **GOAL:** Rewrite the CURRENT SCENE SUMMARY based ONLY on permanent changes from the ENGINE REPORT.
+        2. **SCENE CHANGE:** If event_type is 'scene_change', the new summary is the new room's description, filtered of DM notes.
+        3. **CRITICAL OBJECT UPDATE (IMPERATIVE):** Examine the 'applied_effects'. If the target object's tags were removed (e.g., 'rigid', 'conceals_item', 'exit_barrier'), you MUST rewrite the description of that object in the summary to reflect its new state (e.g., 'iron bars' becomes 'broken, bent iron bars' or 'stone slab' becomes 'moved stone slab').
+           - *Example 1:* If 'rigid' and 'exit_barrier' were removed from 'bars', update the summary to state the 'north exit is now open/blocked by bent iron'.
+           - *Example 2:* If 'conceals_item' was removed, update the summary to state the container is now 'empty' or 'moved aside'.
+        4. **SKIP MEMORY UPDATE:** If event_type is 'stats_report', return the existing `current_scene_summary` unchanged.
+
         ### OUTPUT FORMAT
-        1. Start by including the following Roll String exactly as provided:
-           {roll_string}
-        2. Immediately follow on the next paragraph with immersive prose.
-        
-        NARRATION RULES:
-        - If target tags are present, integrate them (e.g., 'rigid iron').
-        - If outcome is FAILURE, state what the target did NOT do (e.g., "The bars did not yield").
+        --- BEGIN JSON OUTPUT ---
+        {{
+          "narration": "{roll_string} [immersive prose here, if applicable]",
+          "updated_scene_summary": "[rewritten, concise scene memory here]"
+        }}
+        --- END JSON OUTPUT ---
         """
 
-        # 3. API CALL
-        user_message = f"ENGINE_REPORT: {json.dumps(director_result)}"
-
+        # --- 4. API CALL ---
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message}
-                ]
+                    {"role": "user", "content": "Generate narration and update scene memory."}
+                ],
+                response_format={"type": "json_object"}
             )
             
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            
+            # Clean and parse JSON response
+            if content.strip().startswith('```json'):
+                content = content.strip()[7:].strip()
+            if content.strip().endswith('```'):
+                content = content.strip()[:-3].strip()
+            
+            return json.loads(content)
 
         except Exception as e:
-            # Note: The temperature fix is applied by removing the temperature parameter above.
-            return f"[Narrator Error] {str(e)}"
+            # Handle potential JSON parsing error if the LLM fails to adhere to the format
+            return {"narration": f"[Narrator/JSON Error] {str(e)}", "updated_scene_summary": current_scene_summary}

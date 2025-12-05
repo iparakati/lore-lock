@@ -1,6 +1,6 @@
 id: prison_break
 title: "The Iron Gauntlet"
-starting_scene_id: C1_S1_CELL_START # Updated to use new ID standard
+starting_scene_id: cell # FIX: Updated to match the scene key in scenes.yaml
 genre: "Gritty Survival"
 tone: "Tense and serious"
 

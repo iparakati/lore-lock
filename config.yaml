@@ -5,4 +5,4 @@
 
 narrator_model: gpt-5-nano 
 listener_model: gpt-5-nano
-debug_mode: false
+debug_mode: true
