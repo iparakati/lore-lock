@@ -1,0 +1,84 @@
+title: "Prison Break"
+start_room: "Damp Stone Cell"
+
+rooms:
+  "Damp Stone Cell":
+    name: "Damp Stone Cell"
+    description: "You wake up on a hard slab in a damp stone cell. The air is cold and smells strongly of brine and mold."
+    items:
+      - "stone slab"
+      - "moldy box"
+
+  "Corridor":
+    name: "The Corridor"
+    description: "A dimly lit corridor, silent except for the drip of water. Torches flicker weakly on the walls."
+    items: []
+
+doors:
+  "iron bars":
+    name: "iron bars"
+    aliases: ["bars"]
+    description: "Thick iron bars blocking the way."
+    locked: true
+    key: "rusty shiv"
+    connections:
+      "Damp Stone Cell": "north"
+      "Corridor": "south"
+    status_descriptions:
+      locked: "They appear to be locked."
+      closed: "Iron bars block the north exit."
+
+items:
+  "rusty shiv":
+    name: "rusty shiv"
+    aliases: ["shiv"]
+    description: "A jagged piece of metal, sharp enough to cut but not meant for heavy fighting."
+    location: "off-stage"
+
+  "stone slab":
+    name: "Stone Slab"
+    aliases: ["slab"]
+    description: "It seems loose. You might be able to move it."
+    location: "Damp Stone Cell"
+    properties:
+      fixed: false
+    interactions:
+      push:
+        - condition: "items['rusty shiv'].location_id == 'off-stage'"
+          message: "You shift the heavy stone slab. Underneath, you discover a rusty shiv!"
+          actions:
+            - type: "move"
+              target: "rusty shiv"
+              destination: "current_location"
+            - type: "set_property"
+              target: "stone slab"
+              property: "fixed"
+              value: true
+      attack:
+        - message: "It's stone. You'll only hurt your hands."
+
+  "moldy box":
+    kind: "container"
+    name: "moldy box"
+    aliases: ["box"]
+    description: "A rotting wooden box."
+    location: "Damp Stone Cell"
+    properties:
+      open: false
+
+test_sequence:
+  - "examine slab"
+  - "push slab"
+  - "take shiv"
+  - "open box"
+  - "put shiv in box"
+  - "look"
+  - "examine box"
+  - "take shiv"
+  - "unlock bars with shiv"
+  - "open bars"
+  - "north"
+
+win_condition:
+  type: "location"
+  target: "Corridor"
