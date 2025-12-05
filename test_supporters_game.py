@@ -8,7 +8,7 @@ import re
 import random
 
 # Data injected by compiler
-GAME_DATA = {'title': 'Prison Break', 'scenes': [{'id': 'Damp Stone Cell', 'name': 'Damp Stone Cell', 'description': 'You wake up on a hard slab in a damp stone cell. The air is cold.', 'contents': [{'id': 'stone slab', 'kind': 'supporter', 'name': 'Stone Slab', 'aliases': ['slab'], 'description': 'A cracked stone slab.', 'properties': {'fixed': True, 'enterable': True}, 'interactions': [{'verb': 'push', 'type': 'before', 'condition': "items['rusty shiv'].location_id == 'off-stage'", 'message': 'You shift the heavy stone slab. Underneath, you discover a rusty shiv!', 'actions': [{'type': 'move', 'target': 'rusty shiv', 'destination': 'current_location'}]}]}, {'id': 'moldy box', 'kind': 'container', 'name': 'moldy box', 'aliases': ['box'], 'description': 'A rotting wooden box.', 'properties': {'open': False, 'transparent': False}}, {'id': 'guard', 'kind': 'person', 'name': 'Guard', 'description': 'A bored guard stands outside the bars.', 'topics': {'freedom': "Hah! You'll rot here.", 'food': 'No soup for you.'}}], 'exits': {'north': {'target': 'Corridor', 'door': 'iron bars'}}}, {'id': 'Corridor', 'name': 'The Corridor', 'description': 'Freedom... almost.', 'exits': {'south': {'target': 'Damp Stone Cell', 'door': 'iron bars'}}}], 'off_stage': [{'id': 'rusty shiv', 'name': 'rusty shiv', 'aliases': ['shiv'], 'description': 'A jagged piece of metal.'}], 'doors': [{'id': 'iron bars', 'name': 'iron bars', 'aliases': ['bars'], 'description': 'Thick iron bars.', 'locked': True, 'key': 'rusty shiv'}], 'start_room': 'Damp Stone Cell', 'test_sequence': ['look', 'examine slab', 'push slab', 'take shiv', 'open box', 'put shiv in box', 'close box', 'look', 'open box', 'take shiv', 'ask guard about freedom', 'unlock bars with shiv', 'open bars', 'north', 'look'], 'win_condition': {'type': 'location', 'target': 'Corridor'}}
+GAME_DATA = {'title': 'Supporter Test', 'scenes': [{'id': 'Deck', 'name': 'Observation Deck', 'contents': [{'id': 'table', 'kind': 'supporter', 'name': 'wooden table', 'description': 'A sturdy table.', 'contents': [{'id': 'apple', 'kind': 'edible', 'name': 'apple'}]}, {'id': 'basket', 'kind': 'container', 'name': 'wicker basket', 'properties': {'open': True}}]}], 'start_room': 'Deck', 'test_sequence': ['look', 'take apple', 'put apple in basket', 'look', 'take apple', 'put apple on table', 'look'], 'win_condition': {'type': 'location', 'target': 'Deck'}}
 
 DM_CONFIG_FILE = "dm_config.yaml"
 
@@ -55,6 +55,8 @@ class AIClient:
         model = self.config.get('model', 'gpt-5-nano')
         temperature = self.config.get('temperature', 1)
 
+        # Context: List a few sample commands or simplified grammar
+        # We don't list ALL commands as it might be too large, but we can give hints.
         context_str = "Translate the user's natural language into one of these standard formats:\n"
         context_str += "- look\n- n, s, e, w\n- take [object]\n- drop [object]\n- put [object] in [container]\n"
         context_str += "- put [object] on [supporter]\n- open [object]\n- close [object]\n"
@@ -217,19 +219,10 @@ class Door(Thing):
         self.connections = data.get('connections', {}) # {room_id: direction}
         self.key_id = data.get('key', None)
         self.properties['portable'] = False
-
-        # Pull top-level fields into properties if present
-        if 'locked' in data: self.properties['locked'] = data['locked']
-        if 'open' in data: self.properties['open'] = data['open']
-
         defaults = {'open': False, 'locked': False, 'openable': True}
         for k, v in defaults.items():
             if k not in self.properties:
                 self.properties[k] = v
-
-        # Auto-set lockable if locked
-        if self.properties['locked']:
-            self.properties['lockable'] = True
 
     def get_description(self):
         desc = self.description
@@ -284,16 +277,11 @@ class Rulebook:
                 # Rule format: {verb: 'take', type: 'before', condition: '...', message: '...', actions: []}
                 if rule.get('verb') == action.verb and rule.get('type') == hook_type:
                     # Check condition
-                    ctx = {
-                        'world': self.world,
-                        'action': action,
-                        'player': self.world.get_player(),
-                        'item': obj,
-                        'items': self.world.entities
-                    }
+                    ctx = {'world': self.world, 'action': action, 'player': self.world.get_player(), 'item': obj}
                     cond = rule.get('condition', 'True')
                     try:
                         # Allow simplified Python expressions
+                        # Map common vars
                         if eval(cond, {}, ctx):
                             if 'message' in rule:
                                 print(rule['message'])
@@ -476,9 +464,6 @@ class Rulebook:
         if verb == 'inventory':
             self.world.show_inventory()
 
-        if verb == 'examine':
-            print(action.noun.get_description())
-
 class Action:
     def __init__(self, verb, noun=None, second=None, topic=None):
         self.verb = verb
@@ -532,10 +517,6 @@ class World:
                         # Update door connections if not fully set
                         d = self.entities[door_id]
                         d.connections[r.id] = dir
-                        if target:
-                            # Also register the target side so we can cross
-                            if target not in d.connections:
-                                d.connections[target] = 'unknown'
                     elif target:
                         r.exits[dir] = target
 

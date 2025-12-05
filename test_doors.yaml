@@ -1,0 +1,34 @@
+title: "Door Test"
+scenes:
+  - id: "Hall"
+    name: "Hallway"
+    contents:
+      - id: "brass key"
+        name: "brass key"
+    exits:
+      east:
+        target: "Bedroom"
+        door: "oak door"
+
+  - id: "Bedroom"
+    name: "Master Bedroom"
+
+doors:
+  - id: "oak door"
+    name: "oak door"
+    locked: true
+    key: "brass key"
+
+start_room: "Hall"
+
+test_sequence:
+  - "east" # Locked
+  - "take brass key"
+  - "unlock oak door with brass key"
+  - "open oak door"
+  - "east"
+  - "look" # Should be in Bedroom
+
+win_condition:
+  type: "location"
+  target: "Bedroom"
