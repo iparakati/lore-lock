@@ -9,6 +9,7 @@ import random
 
 # Data injected by compiler
 GAME_DATA = {'title': 'Undo Test', 'purpose': 'Test the undo functionality to ensure game state can be reverted.', 'scenes': [{'id': 'Room A', 'name': 'Room A', 'contents': [{'id': 'ball', 'name': 'ball'}]}], 'start_room': 'Room A', 'test_sequence': ['look', 'take ball', 'i', 'undo', 'i', 'look'], 'win_condition': {'type': 'location', 'target': 'Room A'}}
+STORY_ID = "undo"
 
 DM_CONFIG_FILE = "dm_config.yaml"
 
@@ -44,7 +45,9 @@ class AIClient:
                         if not line or line.startswith("#"): continue
                         if "=" in line:
                             key, val = line.split("=", 1)
-                            os.environ[key.strip()] = val.strip()
+                            key = key.strip()
+                            if key not in os.environ:
+                                os.environ[key] = val.strip()
             except Exception as e:
                 print(f"Warning: Failed to load .env: {e}")
 
@@ -736,7 +739,7 @@ class World:
             target = room.exits[direction]
 
             # If target is a door, check if open
-            if target in self.entities:
+            if target in self.entities and self.entities[target].kind == 'door':
                 door = self.entities[target]
                 if not door.has_prop('open'):
                     print(f"The {door.name} is closed.")
@@ -801,6 +804,7 @@ class World:
         if verb == 'wait' or text == 'z': print("Time passes."); return
         if verb == 'save': self.save_game(); return
         if verb == 'load': self.load_game(); return
+        if verb == 'menu': print("Exiting to menu..."); return "menu"
 
         # Complex verbs
         # Patterns:
@@ -857,34 +861,43 @@ class World:
         else:
             print("I didn't understand that.")
 
-    def save_game(self, filename="savegame.json"):
-        # Basic serialization
+    def save_game(self):
+        filename = f"{STORY_ID}.save"
         state = {
             'player_loc': self.entities['player'].location_id,
             'entities': {eid: e.to_state() for eid, e in self.entities.items()}
         }
         with open(filename, 'w') as f: json.dump(state, f)
-        print("Saved.")
+        print(f"Saved to {filename}.")
 
-    def load_game(self, filename="savegame.json"):
+    def load_game(self):
+        filename = f"{STORY_ID}.save"
         try:
             with open(filename, 'r') as f: state = json.load(f)
             self.move_entity('player', state['player_loc'])
             for eid, s in state['entities'].items():
                 if eid in self.entities: self.entities[eid].load_state(s)
-            print("Loaded.")
+            print(f"Loaded from {filename}.")
             self.look()
-        except: print("Load failed.")
+        except: print("No save file found.")
 
 def main():
     game = World(GAME_DATA)
-    print("Welcome.")
+
+    title = GAME_DATA.get('title', 'Untitled')
+    author = GAME_DATA.get('author', 'Anonymous')
+
+    print(f"\n\"{title}\"")
+    print(f"An Interactive Fiction by {author}")
+    print("Release 1 / Lore Lock Engine\n")
+
     game.look()
     while True:
         try:
             cmd = input("> ")
             if cmd == "quit": break
-            game.parse(cmd)
+            res = game.parse(cmd)
+            if res == "menu": break
         except EOFError: break
 
 if __name__ == "__main__":

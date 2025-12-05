@@ -50,7 +50,9 @@ class AIClient:
                         if not line or line.startswith("#"): continue
                         if "=" in line:
                             key, val = line.split("=", 1)
-                            os.environ[key.strip()] = val.strip()
+                            key = key.strip()
+                            if key not in os.environ:
+                                os.environ[key] = val.strip()
             except Exception as e:
                 print(f"Warning: Failed to load .env: {e}")
 
@@ -742,7 +744,7 @@ class World:
             target = room.exits[direction]
 
             # If target is a door, check if open
-            if target in self.entities:
+            if target in self.entities and self.entities[target].kind == 'door':
                 door = self.entities[target]
                 if not door.has_prop('open'):
                     print(f"The {door.name} is closed.")
@@ -913,7 +915,7 @@ import sys
 import os
 
 # Ensure the 'stories/games' directory is in the path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../games')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../stories/games')))
 
 from %s import World, AIClient
 
@@ -944,7 +946,7 @@ class TestGame(unittest.TestCase):
             self.assertEqual(game.get_player_room().id, win['target'])
 
     def tearDown(self):
-        if os.path.exists("savegame.json"): os.remove("savegame.json")
+        if os.path.exists("%s.save"): os.remove("%s.save")
 
 if __name__ == '__main__':
     unittest.main()
@@ -953,10 +955,10 @@ if __name__ == '__main__':
 def generate_game_code(data, story_id):
     return TEMPLATE % (repr(data), story_id)
 
-def generate_test_code(data, module_name):
+def generate_test_code(data, module_name, story_id):
     test_commands = data.get('test_sequence', [])
     win_condition = data.get('win_condition', {})
-    return TEST_TEMPLATE % (module_name, module_name, module_name, module_name, repr(test_commands), repr(win_condition))
+    return TEST_TEMPLATE % (module_name, module_name, module_name, module_name, repr(test_commands), repr(win_condition), story_id, story_id)
 
 def compile_game(yaml_file):
     with open(yaml_file, 'r') as f:
@@ -973,7 +975,7 @@ def compile_game(yaml_file):
 
     # Ensure directories exist
     os.makedirs('stories/games', exist_ok=True)
-    os.makedirs('stories/tests', exist_ok=True)
+    os.makedirs('tests/stories', exist_ok=True)
 
     game_filename = os.path.join('stories/games', "game_" + base_name + ".py")
     with open(game_filename, 'w') as f:
@@ -984,9 +986,9 @@ def compile_game(yaml_file):
     # Module name is just the filename without extension
     module_name = "game_" + base_name
 
-    test_code = generate_test_code(data, module_name)
+    test_code = generate_test_code(data, module_name, base_name)
 
-    test_filename = os.path.join('stories/tests', "test_" + base_name + ".py")
+    test_filename = os.path.join('tests/stories', "test_" + base_name + ".py")
     with open(test_filename, 'w') as f:
         f.write(test_code)
     print(f"Generated {test_filename}")
@@ -1002,7 +1004,7 @@ def compile_all():
             compile_game(os.path.join(story_dir, filename))
 
     print("\\nRunning all tests...")
-    test_dir = 'stories/tests'
+    test_dir = 'tests/stories'
     for filename in os.listdir(test_dir):
         if filename.startswith("test_") and filename.endswith(".py"):
             print(f"\\n>>> Running {filename}")

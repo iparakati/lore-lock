@@ -40,38 +40,43 @@ The core of the engine replaces simple `if/else` checks with a Rulebook system.
 
 ### Meta-Commands
 *   `undo`: Reverts the game state to the start of the previous turn.
+*   `save`: Saves the current game state to a file.
+*   `load`: Loads the game state from a file.
 
 ## 4. Conversation System
 *   **Verbs:** `ask`, `tell`.
 *   **Logic:** `Person` entities have a `topics` dictionary mapping keywords to responses.
 
-## 5. How to Add a Story
+## 5. How to Add or Update a Story for Testing
 
-To add a new story or test case, create a new YAML file in `stories/yaml/`.
+The project uses story files not just for content, but as a comprehensive test suite. Each story file can verify specific engine functionalities.
+
+### Location
+All story files are located in `stories/yaml/`.
 
 ### Naming Convention
-*   **File Name:** `<name>.yaml` (e.g., `mystery.yaml`).
+*   **File Name:** `<name>.yaml` (e.g., `mystery.yaml`, `containers.yaml`).
+*   Avoid using prefixes like `story_` or `test_` unless necessary.
 
 ### YAML Structure
 The YAML file must include the following metadata to ensure the compiler can generate both the game and the test suite:
 
 ```yaml
-title: "My Mystery Story"
-purpose: "Demonstrate the conversation system and hidden doors." # Mandatory description of functionality
+title: "Feature Test: Containers"
+purpose: "Verify open/close/lock mechanics." # Mandatory description
 
 # The 'TEST ME' sequence.
 # This list of commands is compiled into an automated test that validates the story.
 test_sequence:
   - "look"
-  - "ask detective about murder"
-  - "north"
-  - "examine bookshelf"
-  - "pull book"
+  - "open box"
+  - "put apple in box"
+  - "close box"
 
 # The condition to pass the test
 win_condition:
   type: "location"
-  target: "Secret Lab"
+  target: "Lab"
 
 # Game World Definition
 scenes: ...
@@ -80,20 +85,30 @@ doors: ...
 
 ### Purpose of `test_sequence`
 The `test_sequence` is crucial. It acts like Inform 7's `TEST ME` command.
-*   **Synchronization:** The compiler uses this list to generate `stories/tests/test_<name>.py`. This ensures your test is always in sync with your story definition.
+*   **Synchronization:** The compiler uses this list to generate `tests/stories/test_<name>.py`. This ensures your test is always in sync with your story definition.
 *   **Verification:** Running the test ensures that the sequence of commands is valid and leads to the `win_condition`.
 
 ### Compilation & Testing
 After creating your file:
 
-1.  **Compile:** `python src/compiler.py stories/yaml/story_mystery.yaml`
-    *   This generates `stories/games/game_mystery.py` and `stories/tests/test_mystery.py`.
-2.  **Test:** `python stories/tests/test_mystery.py`
+1.  **Compile:** `python src/compiler.py stories/yaml/<name>.yaml`
+    *   This generates `stories/games/game_<name>.py` and `tests/stories/test_<name>.py`.
+2.  **Test:** `python tests/stories/test_<name>.py`
 
-To run the entire suite of stories:
+To run the entire suite of stories and tests:
 ```bash
 python src/compiler.py --all
 ```
+
+### Existing Test Stories
+Use these as references or update them to cover new edge cases:
+*   `containers.yaml`: Tests containers (open/close, transparent/opaque, putting things in/on).
+*   `doors.yaml`: Tests bidirectional doors, keys, and locking mechanics.
+*   `undo.yaml`: Tests the `undo` command and state reversion.
+*   `save_load.yaml`: Tests persistence via `save` and `load` commands.
+*   `supporters.yaml`: Tests 'on' relations (vs 'in').
+*   `conversation.yaml`: Tests NPC interactions (`ask`/`tell`).
+*   `prison_break.yaml`: A comprehensive integration test combining multiple features.
 
 ## 6. AI Integration
 The `AIClient` remains a fallback. If the strict parser fails, the AI attempts to map the user's sentence to a strict command format.
