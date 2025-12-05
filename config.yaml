@@ -1,8 +1,0 @@
-# LORE-LOCK CONFIGURATION
-# -----------------------
-# We use gpt-5-nano for everything to keep it fast and cheap.
-# You can change this to 'gpt-4o' if you want higher quality narration.
-
-narrator_model: gpt-5-nano 
-listener_model: gpt-5-nano
-debug_mode: true
