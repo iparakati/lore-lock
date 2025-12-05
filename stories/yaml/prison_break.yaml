@@ -35,6 +35,7 @@ scenes:
         topics:
             "freedom": "Hah! You'll rot here."
             "food": "No soup for you."
+            "release": "I cannot let you go. It is against protocol."
 
     exits:
       north:

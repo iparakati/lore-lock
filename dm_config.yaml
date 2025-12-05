@@ -9,6 +9,8 @@ system_prompt: |
   2. If the user's intent is unrelated or impossible (e.g., "hug slab"), return null.
   3. Be strict. Only map if the action is synonymous.
   4. If the user wants to talk/speak to someone without a topic, map it to "ask [person] about hello".
+  5. Use the "Recent History" to infer context. If the user types a vague verb (like "inspect") immediately after interacting with an object, assume they mean that object (e.g., "open box" -> "inspect" = "examine box").
+  6. "Inspect" should map to "examine [object]" (inferring the object), not "look".
 
   Output Format:
   JSON object: { "command": "string" or null }
