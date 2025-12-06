@@ -1,0 +1,101 @@
+title: "Starship Crisis"
+author: "Jules"
+purpose: "A sci-fi puzzle game testing custom interactions and state changes."
+
+scenes:
+  - id: "Engine Room"
+    name: "Engine Room"
+    description: "Red alert lights flash rhythmically. The massive Main Drive is silent. The Main Console sits in the center, looking dead."
+    contents:
+      - id: "main console"
+        kind: "container"
+        name: "Main Console"
+        aliases: ["console", "drive", "slot"]
+        description: "The control interface for the Main Drive. It has a slot for a power core."
+        properties: { fixed: true, open: true, openable: false }
+        interactions:
+          - verb: "put"
+            type: "after"
+            condition: "action.noun.id == 'power cell'"
+            message: "You slide the Power Cell into the console. Hummm... The lights turn steady blue! The blast door to the North unlocks."
+            actions:
+              - { type: "set_property", target: "blast door", property: "locked", value: false }
+
+      - id: "service droid"
+        kind: "person"
+        name: "Service Droid"
+        description: "A small floating robot, panicking slightly."
+        topics:
+            "status": "The power is out! We need a Power Cell!"
+            "cell": "There should be a spare Power Cell in the Cargo Bay."
+            "power cell": "There should be a spare Power Cell in the Cargo Bay."
+            "core": "There should be a spare Power Cell in the Cargo Bay."
+            "power core": "There should be a spare Power Cell in the Cargo Bay."
+            "cargo": "The Cargo Bay is to the East from the Corridor."
+            "door": "The Bridge Blast Door is locked until power is restored."
+            "hello": "Beep boop. Emergency!"
+
+    exits:
+      north: "Corridor"
+
+  - id: "Corridor"
+    name: "Main Corridor"
+    description: "A long metallic hallway vibrating with residual energy."
+    exits:
+      south: "Engine Room"
+      east: "Cargo Bay"
+      north:
+        target: "Bridge"
+        door: "blast door"
+
+  - id: "Cargo Bay"
+    name: "Cargo Bay"
+    description: "Crates are stacked high. It smells of ozone."
+    contents:
+      - id: "metal crate"
+        kind: "container"
+        name: "Metal Crate"
+        aliases: ["crate", "box"]
+        description: "A sturdy metal shipping crate."
+        properties: { open: false, openable: true }
+        contents:
+          - id: "power cell"
+            kind: "thing"
+            name: "Power Cell"
+            aliases: ["cell", "battery", "core"]
+            description: "A glowing blue cylinder pulsating with energy."
+            properties: { portable: true }
+
+    exits:
+      west: "Corridor"
+
+  - id: "Bridge"
+    name: "The Bridge"
+    description: "You made it! The stars look beautiful."
+
+doors:
+  - id: "blast door"
+    name: "Blast Door"
+    aliases: ["door", "gate"]
+    description: "A heavy blast door blocking the way to the Bridge."
+    locked: true
+    # No key, must be opened via console
+
+start_room: "Engine Room"
+
+test_sequence:
+  - "look"
+  - "north"
+  - "east"
+  - "open crate"
+  - "take cell"
+  - "west"
+  - "south"
+  - "put cell in console"
+  - "north"
+  - "open blast door"
+  - "north"
+
+win_condition:
+  type: "location"
+  target: "Bridge"

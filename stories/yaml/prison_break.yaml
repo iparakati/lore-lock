@@ -5,13 +5,13 @@ purpose: "Demonstrate a complete escape room scenario involving puzzles (pushabl
 scenes:
   - id: "Damp Stone Cell"
     name: "Damp Stone Cell"
-    description: "You wake up on a hard slab in a damp stone cell. The air is cold."
+    description: "You wake up on a hard Stone Slab in a damp stone cell. The air is cold. The slab looks uneven."
     contents:
       - id: "stone slab"
         kind: "supporter"
         name: "Stone Slab"
         aliases: ["slab"]
-        description: "A cracked stone slab."
+        description: "A cracked stone slab. It looks like it could be shifted."
         properties: { fixed: true, enterable: true }
         interactions:
           - verb: "push"
@@ -27,15 +27,29 @@ scenes:
         aliases: ["box"]
         description: "A rotting wooden box."
         properties: { open: false, transparent: false }
+        contents:
+          - id: "crumpled note"
+            kind: "thing"
+            name: "crumpled note"
+            aliases: ["note", "paper"]
+            description: "A scrap of paper. It reads: 'They never check under the slab.'"
 
       - id: "guard"
         kind: "person"
         name: "Guard"
-        description: "A bored guard stands outside the bars."
+        description: "A bored guard stands outside the bars. He looks like he might talk about the prison, food, or his boredom."
         topics:
             "freedom": "Hah! You'll rot here."
             "food": "No soup for you."
             "release": "I cannot let you go. It is against protocol."
+            "boredom": "Yeah, it's dull. But at least I'm not in there."
+            "prison": "It's the safest place for scum like you."
+            "slab": "Don't get any ideas about that slab."
+            "box": "Just some old junk."
+            "shiv": "What shiv? You better not have a weapon!"
+            "key": "The key stays with me... mostly."
+            "work": "Long shifts. Little pay. But I hold the keys."
+            "schedule": "I'm here all day. Don't think about trying anything."
 
     exits:
       north:
@@ -59,8 +73,8 @@ off_stage:
 doors:
   - id: "iron bars"
     name: "iron bars"
-    aliases: ["bars"]
-    description: "Thick iron bars."
+    aliases: ["bars", "lock"]
+    description: "Thick iron bars with a heavy lock."
     locked: true
     key: "rusty shiv"
 

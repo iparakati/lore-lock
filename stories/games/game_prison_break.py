@@ -8,7 +8,7 @@ import re
 import random
 
 # Data injected by compiler
-GAME_DATA = {'title': 'Prison Break', 'author': 'Lore Lock', 'purpose': 'Demonstrate a complete escape room scenario involving puzzles (pushable slab), hidden items (shiv), containment (box), NPC interaction (guard), and lockable doors.', 'scenes': [{'id': 'Damp Stone Cell', 'name': 'Damp Stone Cell', 'description': 'You wake up on a hard slab in a damp stone cell. The air is cold.', 'contents': [{'id': 'stone slab', 'kind': 'supporter', 'name': 'Stone Slab', 'aliases': ['slab'], 'description': 'A cracked stone slab.', 'properties': {'fixed': True, 'enterable': True}, 'interactions': [{'verb': 'push', 'type': 'before', 'condition': "items['rusty shiv'].location_id == 'off-stage'", 'message': 'You shift the heavy stone slab. Underneath, you discover a rusty shiv!', 'actions': [{'type': 'move', 'target': 'rusty shiv', 'destination': 'current_location'}]}]}, {'id': 'moldy box', 'kind': 'container', 'name': 'moldy box', 'aliases': ['box'], 'description': 'A rotting wooden box.', 'properties': {'open': False, 'transparent': False}}, {'id': 'guard', 'kind': 'person', 'name': 'Guard', 'description': 'A bored guard stands outside the bars.', 'topics': {'freedom': "Hah! You'll rot here.", 'food': 'No soup for you.', 'release': 'I cannot let you go. It is against protocol.'}}], 'exits': {'north': {'target': 'Corridor', 'door': 'iron bars'}}}, {'id': 'Corridor', 'name': 'The Corridor', 'description': 'Freedom... almost.', 'exits': {'south': {'target': 'Damp Stone Cell', 'door': 'iron bars'}}}], 'off_stage': [{'id': 'rusty shiv', 'name': 'rusty shiv', 'aliases': ['shiv'], 'description': 'A jagged piece of metal.'}], 'doors': [{'id': 'iron bars', 'name': 'iron bars', 'aliases': ['bars'], 'description': 'Thick iron bars.', 'locked': True, 'key': 'rusty shiv'}], 'start_room': 'Damp Stone Cell', 'test_sequence': ['look', 'examine slab', 'push slab', 'take shiv', 'open box', 'put shiv in box', 'close box', 'look', 'open box', 'take shiv', 'ask guard about freedom', 'unlock bars with shiv', 'open bars', 'north', 'look'], 'win_condition': {'type': 'location', 'target': 'Corridor'}}
+GAME_DATA = {'title': 'Prison Break', 'author': 'Lore Lock', 'purpose': 'Demonstrate a complete escape room scenario involving puzzles (pushable slab), hidden items (shiv), containment (box), NPC interaction (guard), and lockable doors.', 'scenes': [{'id': 'Damp Stone Cell', 'name': 'Damp Stone Cell', 'description': 'You wake up on a hard Stone Slab in a damp stone cell. The air is cold. The slab looks uneven.', 'contents': [{'id': 'stone slab', 'kind': 'supporter', 'name': 'Stone Slab', 'aliases': ['slab'], 'description': 'A cracked stone slab. It looks like it could be shifted.', 'properties': {'fixed': True, 'enterable': True}, 'interactions': [{'verb': 'push', 'type': 'before', 'condition': "items['rusty shiv'].location_id == 'off-stage'", 'message': 'You shift the heavy stone slab. Underneath, you discover a rusty shiv!', 'actions': [{'type': 'move', 'target': 'rusty shiv', 'destination': 'current_location'}]}]}, {'id': 'moldy box', 'kind': 'container', 'name': 'moldy box', 'aliases': ['box'], 'description': 'A rotting wooden box.', 'properties': {'open': False, 'transparent': False}, 'contents': [{'id': 'crumpled note', 'kind': 'thing', 'name': 'crumpled note', 'aliases': ['note', 'paper'], 'description': "A scrap of paper. It reads: 'They never check under the slab.'"}]}, {'id': 'guard', 'kind': 'person', 'name': 'Guard', 'description': 'A bored guard stands outside the bars. He looks like he might talk about the prison, food, or his boredom.', 'topics': {'freedom': "Hah! You'll rot here.", 'food': 'No soup for you.', 'release': 'I cannot let you go. It is against protocol.', 'boredom': "Yeah, it's dull. But at least I'm not in there.", 'prison': "It's the safest place for scum like you.", 'slab': "Don't get any ideas about that slab.", 'box': 'Just some old junk.', 'shiv': 'What shiv? You better not have a weapon!', 'key': 'The key stays with me... mostly.', 'work': 'Long shifts. Little pay. But I hold the keys.', 'schedule': "I'm here all day. Don't think about trying anything."}}], 'exits': {'north': {'target': 'Corridor', 'door': 'iron bars'}}}, {'id': 'Corridor', 'name': 'The Corridor', 'description': 'Freedom... almost.', 'exits': {'south': {'target': 'Damp Stone Cell', 'door': 'iron bars'}}}], 'off_stage': [{'id': 'rusty shiv', 'name': 'rusty shiv', 'aliases': ['shiv'], 'description': 'A jagged piece of metal.'}], 'doors': [{'id': 'iron bars', 'name': 'iron bars', 'aliases': ['bars', 'lock'], 'description': 'Thick iron bars with a heavy lock.', 'locked': True, 'key': 'rusty shiv'}], 'start_room': 'Damp Stone Cell', 'test_sequence': ['look', 'examine slab', 'push slab', 'take shiv', 'open box', 'put shiv in box', 'close box', 'look', 'open box', 'take shiv', 'ask guard about freedom', 'unlock bars with shiv', 'open bars', 'north', 'look'], 'win_condition': {'type': 'location', 'target': 'Corridor'}}
 STORY_ID = "prison_break"
 
 DM_CONFIG_FILE = "dm_config.yaml"
@@ -292,7 +292,7 @@ class Person(Thing):
 class Rulebook:
     def __init__(self, world):
         self.world = world
-        self.STANDARD_VERBS = {'take', 'drop', 'put', 'enter', 'inventory', 'look', 'examine', 'open', 'close', 'lock', 'unlock', 'wear', 'eat', 'ask', 'tell', 'talk'}
+        self.STANDARD_VERBS = {'take', 'drop', 'put', 'enter', 'inventory', 'look', 'examine', 'open', 'close', 'lock', 'unlock', 'wear', 'eat', 'ask', 'tell', 'talk', 'push', 'pull'}
 
     def process(self, action):
         # 1. Before Rules (Custom interactions)
@@ -459,9 +459,16 @@ class Rulebook:
              if target.kind != 'person': self.world.io.write("You can't talk to that."); return False
              return True
 
+        if verb == 'push':
+            if not action.noun: self.world.io.write("Push what?"); return False
+            self.world.io.write("Nothing happens."); return False
+
+        if verb == 'pull':
+            if not action.noun: self.world.io.write("Pull what?"); return False
+            self.world.io.write("Nothing happens."); return False
+
         if verb == 'go':
-             # Handled in parser usually, but if we map 'go north' -> verb='go', noun='north'
-             # Or verb='north'. Let's stick to verb='north' for simplicity in parser, or check standard map.
+             # Handled in parser usually
              pass
 
         return True
@@ -509,7 +516,9 @@ class Rulebook:
         if verb == 'take': self.world.io.write("Taken.")
         if verb == 'drop': self.world.io.write("Dropped.")
         if verb == 'put': self.world.io.write(f"You put the {action.noun.name} on/in the {action.second.name}.")
-        if verb == 'open': self.world.io.write("Opened.")
+        if verb == 'open':
+            self.world.io.write("Opened.")
+            self.world.io.write(action.noun.get_description())
         if verb == 'close': self.world.io.write("Closed.")
         if verb == 'lock': self.world.io.write("Locked.")
         if verb == 'unlock': self.world.io.write("Unlocked.")
@@ -598,8 +607,13 @@ class World:
             r = self.entities[scene['id']]
             if 'exits' in scene:
                 for dir, info in scene['exits'].items():
-                    target = info.get('target')
-                    door_id = info.get('door')
+                    if isinstance(info, str):
+                        target = info
+                        door_id = None
+                    else:
+                        target = info.get('target')
+                        door_id = info.get('door')
+
                     if door_id:
                         r.exits[dir] = door_id
                         # Update door connections if not fully set
@@ -750,7 +764,14 @@ class World:
         context_lines = []
         context_lines.append(f"Location: {room.name}")
 
-        visible_names = [e.name for e in scope if e.id != 'player']
+        visible_names = []
+        for e in scope:
+            if e.id == 'player': continue
+            name = e.name
+            if e.has_prop('locked'): name += " (locked)"
+            elif e.has_prop('closed'): name += " (closed)"
+            elif e.has_prop('open'): name += " (open)"
+            visible_names.append(name)
         context_lines.append(f"Visible: {', '.join(visible_names)}")
 
         for e in scope:
@@ -819,8 +840,12 @@ class World:
             if target in self.entities and self.entities[target].kind == 'door':
                 door = self.entities[target]
                 if not door.has_prop('open'):
-                    self.io.write(f"The {door.name} is closed.")
-                    return
+                    if not door.has_prop('locked'):
+                         self.io.write(f"(First opening the {door.name})")
+                         door.set_prop('open', True)
+                    else:
+                         self.io.write(f"The {door.name} is closed.")
+                         return
                 # Find destination from door connections
                 # door.connections = {roomA: dirA, roomB: dirB}
                 # We want the 'other' room
@@ -840,6 +865,14 @@ class World:
     def parse(self, text):
         text = text.lower().strip()
         if not text: return
+
+        # Pre-process: remove stopwords 'the', 'a', 'an'
+        for w in ['the ', 'a ', 'an ']:
+            text = text.replace(f" {w}", " ")
+            if text.startswith(w): text = text[len(w):]
+
+        # Handle 'talk to'
+        text = text.replace('talk to ', 'talk ')
 
         self.io.log_input(text)
 
@@ -863,9 +896,45 @@ class World:
             self.move_player(text)
             return
 
+        # Handle 'go [dir]'
+        if text.startswith("go ") or text.startswith("walk "):
+            parts = text.split(" ", 1)
+            if len(parts) > 1:
+                direction = parts[1]
+                if direction in dirs: direction = dirs[direction]
+                if direction in ['north','south','east','west','up','down']:
+                    self.move_player(direction)
+                    return
+
         # 2. Tokenize
         tokens = text.split()
         verb = tokens[0]
+
+        if verb == 'insert' or verb == 'place': verb = 'put'
+        if verb == 'read': verb = 'examine'
+        if verb == 'shift' or verb == 'shove': verb = 'push'
+
+        # Handle 'look at/in' -> 'examine'
+        if verb == 'look' and len(tokens) > 1:
+            if ' around' in text:
+                verb = 'look'
+                tokens = ['look']
+            elif ' at ' in text:
+                verb = 'examine'
+                text = text.replace('look at ', 'examine ')
+            elif ' inside ' in text:
+                verb = 'examine'
+                text = text.replace('look inside ', 'examine ')
+            elif ' in ' in text:
+                verb = 'examine'
+                text = text.replace('look in ', 'examine ')
+            elif ' under ' in text:
+                verb = 'examine'
+                text = text.replace('look under ', 'examine ')
+
+            # Re-tokenize if changed
+            if verb == 'examine':
+                tokens = text.split()
 
         # Simple verbs
         if verb == 'undo':
@@ -878,7 +947,7 @@ class World:
                 self.look()
             return
 
-        if verb == 'look' or text == 'l': self.rulebook.process(Action('look')); return
+        if (verb == 'look' or text == 'l') and len(tokens) == 1: self.rulebook.process(Action('look')); return
         if verb == 'inventory' or text == 'i': self.rulebook.process(Action('inventory')); return
         if verb == 'wait' or text == 'z': self.io.write("Time passes."); return
         if verb == 'save': self.save_game(); return
@@ -925,10 +994,10 @@ class World:
             except: pass
 
         # SVO
-        if len(tokens) > 1:
+        if len(tokens) >= 1:
             noun_str = " ".join(tokens[1:])
             noun = self.find_in_scope(noun_str)
-            if noun:
+            if noun or len(tokens) == 1:
                 if self.rulebook.process(Action(verb, noun=noun)):
                     return
 
@@ -940,6 +1009,8 @@ class World:
             "open [item]", "close [item]",
             "lock [item] with [key]", "unlock [item] with [key]",
             "wear [item]", "eat [item]", "enter [item]",
+            "push [item]", "pull [item]",
+            "go [direction]",
             "ask [person] about [topic]", "tell [person] about [topic]"
         ]
 
@@ -955,6 +1026,14 @@ class World:
                 self.parse(mapped)
         else:
             self.io.write("I didn't understand that.")
+
+    def check_win(self):
+        win = GAME_DATA.get('win_condition')
+        if win and win.get('type') == 'location':
+            if self.get_player_room().id == win['target']:
+                self.io.write("\n*** YOU HAVE WON ***")
+                return True
+        return False
 
     def save_game(self):
         filename = f"{STORY_ID}.save"
@@ -993,6 +1072,7 @@ def main():
             if cmd == "quit": break
             res = game.parse(cmd)
             if res == "menu": break
+            if game.check_win(): break
         except EOFError: break
 
 if __name__ == "__main__":
