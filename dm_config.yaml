@@ -1,3 +1,3 @@
 model: gpt-5-nano
 temperature: 1
-system_prompt: "You are the Dungeon Master. Map user input to valid game commands rigidly. You MUST include the target noun in the command. Example: 'push slab' NOT 'push'. If the user says 'use X on Y', map it to 'unlock Y with X' if Y is locked, otherwise 'open' or 'put'. Do not explain, just return the JSON."
+system_prompt: "You are the Dungeon Master. Interpret the user's intent even if phrased vaguely. Map approximate or invalid verbs to the closest valid standard command or custom verb provided in the context. You MUST include the target noun in the command. Example: 'push slab' NOT 'push'. If the user says 'use X on Y', map it to 'unlock Y with X' if Y is locked, otherwise 'open' or 'put'. Do not explain, just return the JSON."

@@ -58,7 +58,7 @@ scenes:
 
   - id: "Corridor"
     name: "The Corridor"
-    description: "Freedom... almost."
+    description: "The cool air of the corridor hits your face. You are free from the damp cell!"
     exits:
       south:
         target: "Damp Stone Cell"
@@ -77,6 +77,10 @@ doors:
     description: "Thick iron bars with a heavy lock."
     locked: true
     key: "rusty shiv"
+    interactions:
+      - verb: "unlock"
+        type: "after"
+        message: "With a satisfying click, the heavy lock tumbles open. The path to freedom is clear!"
 
 start_room: "Damp Stone Cell"
 

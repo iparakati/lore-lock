@@ -1,0 +1,39 @@
+title: "Feature Test: Wear and Eat"
+purpose: "Verify clothing and food mechanics."
+
+scenes:
+  - id: "Bedroom"
+    name: "Bedroom"
+    contents:
+      - id: "hat"
+        kind: "wearable"
+        name: "Hat"
+        description: "A fancy hat."
+      - id: "apple"
+        kind: "edible"
+        name: "Apple"
+        description: "A red apple."
+      - id: "box"
+        kind: "container"
+        name: "Box"
+        properties: { open: true }
+
+start_room: "Bedroom"
+
+test_sequence:
+  - "take hat"
+  - "wear hat"
+  - "inventory"
+  - "drop hat"
+  - "look"
+  - "take hat"
+  - "wear hat"
+  - "put hat in box"
+  - "look"
+  - "take apple"
+  - "eat apple"
+  - "inventory"
+
+win_condition:
+  type: "location"
+  target: "Bedroom"
