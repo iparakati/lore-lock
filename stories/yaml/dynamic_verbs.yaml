@@ -1,0 +1,67 @@
+title: "Feature Test: Dynamic Verbs"
+purpose: "Verify dynamic verb discovery and alias handling (calibrate, gesture)."
+
+scenes:
+  - id: "Control Room"
+    name: "Control Room"
+    description: "The airlock hisses shut behind you. You are in the Control Room. A strange Alien Console hums with a low, dissonant thrum."
+    contents:
+      - id: "alien console"
+        kind: "thing"
+        name: "Alien Console"
+        aliases: ["console", "panel", "blue panel", "button", "red button", "harmonics", "crystals"]
+        description: "A sleek, crystalline interface pulsing with light. A single red button pulses in rhythm. The vibration suggests a desperate need for calibration."
+        properties: { fixed: true }
+        interactions:
+          - verb: "touch"
+            type: "before"
+            message: "The crystalline panel feels warm and hums under your fingertips."
+          - verb: "push"
+            type: "before"
+            message: "You push the button. A discordant buzz echoes through the room. The harmonies are critically out of alignment. Calibration is required immediately."
+          - verb: "calibrate"
+            type: "before"
+            condition: "True"
+            message: "You run your hands over the crystals, aligning the frequencies. A pure, resonant tone fills the room, vibrating in your chest. The blast door recognizes the harmony and slides open!"
+            actions:
+              - { type: "set_property", target: "blast door", property: "locked", value: false }
+              - { type: "set_property", target: "blast door", property: "open", value: true }
+
+      - id: "alien"
+        kind: "person"
+        name: "Alien Diplomat"
+        description: "A tall, slender being. It waits for a gesture of peace."
+        interactions:
+          - verb: "gesture"
+            type: "before"
+            message: "The alien nods in understanding."
+        topics:
+          "blast door": "It is sealed. The console's harmonics require calibration."
+          "door": "It is sealed. The console's harmonics require calibration."
+          "console": "It requires calibration. The harmonies are off."
+          "mission": "We wait for the One Who Tunes."
+
+    exits:
+        north: { target: "Airlock", door: "blast door" }
+
+  - id: "Airlock"
+    name: "Airlock"
+    description: "You are back in the safety of your ship. The mission is a success."
+
+doors:
+  - id: "blast door"
+    name: "blast door"
+    locked: true
+
+start_room: "Control Room"
+
+test_sequence:
+  - "look"
+  - "touch console"
+  - "push button"
+  - "calibrate harmonics"
+  - "north"
+
+win_condition:
+  type: "location"
+  target: "Airlock"

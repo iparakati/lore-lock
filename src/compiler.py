@@ -23,7 +23,7 @@ DM_CONFIG_FILE = "dm_config.yaml"
 # ==========================================
 class GameIO:
     def __init__(self):
-        self.history = [] # For context context
+        self.history = []
         self.last_input = None
         self.current_turn_output = []
 
@@ -32,7 +32,6 @@ class GameIO:
         self.current_turn_output.append(str(message))
 
     def log_input(self, text):
-        # Archive previous turn
         if self.last_input is not None:
              self.history = ["User: " + self.last_input, "System: " + " ".join(self.current_turn_output)]
 
@@ -68,7 +67,6 @@ class AIClient:
 
     def _find_file(self, filename):
         if os.path.exists(filename): return filename
-        # Check parent directories (up to 3 levels)
         path = filename
         for _ in range(3):
             path = os.path.join("..", path)
@@ -98,7 +96,6 @@ class AIClient:
         model = self.config.get('model', 'gpt-5-nano')
         temperature = self.config.get('temperature', 1)
 
-        # Build dynamic context
         valid_cmds_str = "\\n".join([f"- {cmd}" for cmd in valid_commands])
 
         prompt = f"Translate the user's natural language into one of these standard formats:\\n{valid_cmds_str}\\n\\n"
@@ -133,7 +130,6 @@ class AIClient:
                 content = json.loads(result['choices'][0]['message']['content'])
                 return content.get('command')
         except Exception as e:
-            # print(f"AI Error: {e}") # Debug only
             return None
 
 # ==========================================
@@ -149,11 +145,8 @@ class Entity:
         self.location_id = data.get('location', None)
         self.properties = data.get('properties', {})
         self.world = world
-        self.contents = [] # IDs of children
+        self.contents = []
         self.kind = data.get('kind', 'thing')
-
-        # Interactions / Custom Rules
-        # Stored as list of dicts: {verb, type, condition, message, actions}
         self.interactions = data.get('interactions', [])
 
     def match_name(self, name):
@@ -188,41 +181,29 @@ class Entity:
 class Thing(Entity):
     def __init__(self, id, data, world):
         super().__init__(id, data, world)
-        # Default properties for Things
         defaults = {
-            'portable': True,
-            'scenery': False,
-            'lit': False,
-            'wearable': False,
-            'edible': False,
-            'pushable': False
+            'portable': True, 'scenery': False, 'lit': False,
+            'wearable': False, 'edible': False, 'pushable': False
         }
         for k, v in defaults.items():
-            if k not in self.properties:
-                self.properties[k] = v
+            if k not in self.properties: self.properties[k] = v
 
 class Room(Entity):
     def __init__(self, id, data, world):
         super().__init__(id, data, world)
         self.kind = 'room'
-        self.properties['lit'] = True # Rooms usually lit by default unless dark
-        self.exits = {} # direction -> entity_id (Door) or room_id
+        self.properties['lit'] = True
+        self.exits = {}
 
 class Container(Thing):
     def __init__(self, id, data, world):
         super().__init__(id, data, world)
-        # Container defaults
         defaults = {
-            'openable': True,
-            'open': False,
-            'locked': False,
-            'lockable': False,
-            'transparent': False,
-            'enterable': False
+            'openable': True, 'open': False, 'locked': False,
+            'lockable': False, 'transparent': False, 'enterable': False
         }
         for k, v in defaults.items():
-            if k not in self.properties:
-                self.properties[k] = v
+            if k not in self.properties: self.properties[k] = v
 
     def get_description(self):
         desc = self.description
@@ -244,8 +225,8 @@ class Container(Thing):
 class Supporter(Thing):
     def __init__(self, id, data, world):
         super().__init__(id, data, world)
-        self.properties['enterable'] = False # Unless a chair/bed
-        self.properties['scenery'] = True # Often furniture is fixed
+        self.properties['enterable'] = False
+        self.properties['scenery'] = True
         self.properties['portable'] = False
 
     def get_description(self):
@@ -259,31 +240,24 @@ class Door(Thing):
     def __init__(self, id, data, world):
         super().__init__(id, data, world)
         self.kind = 'door'
-        self.connections = data.get('connections', {}) # {room_id: direction}
+        self.connections = data.get('connections', {})
         self.key_id = data.get('key', None)
         self.properties['portable'] = False
 
-        # Pull top-level fields into properties if present
         if 'locked' in data: self.properties['locked'] = data['locked']
         if 'open' in data: self.properties['open'] = data['open']
 
         defaults = {'open': False, 'locked': False, 'openable': True}
         for k, v in defaults.items():
-            if k not in self.properties:
-                self.properties[k] = v
+            if k not in self.properties: self.properties[k] = v
 
-        # Auto-set lockable if locked
-        if self.properties['locked']:
-            self.properties['lockable'] = True
+        if self.properties['locked']: self.properties['lockable'] = True
 
     def get_description(self):
         desc = self.description
-        if self.has_prop('locked'):
-            desc += " It is locked."
-        elif self.has_prop('open'):
-            desc += " It is open."
-        else:
-            desc += " It is closed."
+        if self.has_prop('locked'): desc += " It is locked."
+        elif self.has_prop('open'): desc += " It is open."
+        else: desc += " It is closed."
         return desc
 
 class Person(Thing):
@@ -292,266 +266,285 @@ class Person(Thing):
         self.kind = 'person'
         self.properties['alive'] = True
         self.properties['portable'] = False
-        self.topics = data.get('topics', {}) # 'topic': 'response'
+        self.topics = data.get('topics', {})
 
 class Rulebook:
     def __init__(self, world):
         self.world = world
-        self.STANDARD_VERBS = {'take', 'drop', 'put', 'enter', 'inventory', 'look', 'examine', 'open', 'close', 'lock', 'unlock', 'wear', 'eat', 'ask', 'tell', 'talk', 'push', 'pull'}
 
     def process(self, action):
-        # 1. Before Rules (Custom interactions)
-        if self.run_custom_rules(action, 'before'): return True # Stopped
-        if self.run_custom_rules(action, 'instead'): return True # Stopped
+        verb = action.verb
 
-        # Check if standard verb
-        if action.verb not in self.STANDARD_VERBS:
+        # 1. Before/Instead
+        if self.run_custom_rules(action, 'before'): return True
+        if self.run_custom_rules(action, 'instead'): return True
+
+        # 2. Check / Carry Out / Report Dispatch
+        check_f = getattr(self, f"check_{verb}", None)
+        carry_f = getattr(self, f"carry_out_{verb}", None)
+        report_f = getattr(self, f"report_{verb}", None)
+
+        if not check_f and not carry_f and not report_f:
+            # Verb not handled by standard rules
             return False
 
-        # 2. Check Rules (Standard logic)
-        check_res = self.check(action)
-        if check_res == "FALLBACK": return False
-        if not check_res: return True # Failed check (handled)
+        if check_f:
+            res = check_f(action)
+            if res == "FALLBACK": return False
+            if not res: return True # Handled failure
 
-        # 3. Carry Out (State change)
-        self.carry_out(action)
+        if carry_f:
+            carry_f(action)
 
-        # 4. After Rules
-        if self.run_custom_rules(action, 'after'): return True # Custom outcome handles report
+        if self.run_custom_rules(action, 'after'): return True
 
-        # 5. Report
-        self.report(action)
+        if report_f:
+            report_f(action)
+
         return True
 
     def run_custom_rules(self, action, hook_type):
-        # Check specific object interactions (noun or second_noun)
         targets = []
         if action.noun: targets.append(action.noun)
         if action.second: targets.append(action.second)
-        # Also check room
         targets.append(self.world.get_player_room())
 
         for obj in targets:
             for rule in obj.interactions:
-                # Rule format: {verb: 'take', type: 'before', condition: '...', message: '...', actions: []}
                 if rule.get('verb') == action.verb and rule.get('type') == hook_type:
-                    # Check condition
                     ctx = {
-                        'world': self.world,
-                        'action': action,
+                        'world': self.world, 'action': action,
                         'player': self.world.get_player(),
-                        'item': obj,
-                        'items': self.world.entities
+                        'item': obj, 'items': self.world.entities
                     }
                     cond = rule.get('condition', 'True')
                     try:
-                        # Allow simplified Python expressions
                         if eval(cond, {}, ctx):
-                            if 'message' in rule:
-                                self.world.io.write(rule['message'])
-                            # Execute side effects
+                            if 'message' in rule: self.world.io.write(rule['message'])
                             for eff in rule.get('actions', []):
                                 self.world.apply_effect(eff)
-                            return True # Rule matched and handled/stopped
+                            return True
                     except Exception as e:
                         self.world.io.write(f"Rule Error: {e}")
         return False
 
-    def check(self, action):
-        # Implement Standard Rules per verb
-        verb = action.verb
+    # --- TAKE ---
+    def check_take(self, action):
         p = self.world.get_player()
-
-        if verb == 'take':
-            if not action.noun: self.world.io.write("Take what?"); return False
-            if action.noun.id == p.id: self.world.io.write("You can't take yourself."); return False
-            if not action.noun.has_prop('portable'): self.world.io.write("That's fixed in place."); return False
-            if action.noun.location_id == p.id: self.world.io.write("You already have that."); return False
-            # Check containment accessibility
-            if not self.world.is_accessible(action.noun): self.world.io.write("You can't reach it."); return False
-            return True
-
-        if verb == 'drop':
-            if not action.noun: self.world.io.write("Drop what?"); return False
-            if action.noun.location_id != p.id: self.world.io.write("You aren't carrying that."); return False
-            return True
-
-        if verb == 'put':
-            if not action.noun: self.world.io.write("Put what?"); return False
-            if not action.second: self.world.io.write("Put it where?"); return False
-            if action.noun.location_id != p.id: self.world.io.write("You aren't carrying that."); return False
-            if action.noun.id == action.second.id: self.world.io.write("You can't put something inside itself."); return False
-            if not action.second.has_prop('open') and not action.second.has_prop('enterable') and action.second.kind == 'container':
-                self.world.io.write(f"The {action.second.name} is closed."); return False
-            return True
-
-        if verb == 'enter':
-             if not action.noun: self.world.io.write("Enter what?"); return False
-             if not action.noun.has_prop('enterable'): self.world.io.write("That's not something you can enter."); return False
-             return True
-
-        if verb == 'inventory':
-            return True
-
-        if verb == 'look':
-            return True
-
-        if verb == 'examine':
-            if not action.noun: self.world.io.write("Examine what?"); return False
-            return True
-
-        if verb == 'open':
-            if not action.noun: self.world.io.write("Open what?"); return False
-            if not action.noun.has_prop('openable'): self.world.io.write("That's not something you can open."); return False
-            if action.noun.has_prop('locked'): self.world.io.write("It is locked."); return False
-            if action.noun.has_prop('open'): self.world.io.write("It is already open."); return False
-            return True
-
-        if verb == 'close':
-            if not action.noun: self.world.io.write("Close what?"); return False
-            if not action.noun.has_prop('openable'): self.world.io.write("That's not something you can close."); return False
-            if not action.noun.has_prop('open'): self.world.io.write("It is already closed."); return False
-            return True
-
-        if verb == 'lock':
-            if not action.noun: self.world.io.write("Lock what?"); return False
-            if not action.noun.has_prop('lockable'): self.world.io.write("That doesn't have a lock."); return False
-            if action.noun.has_prop('locked'): self.world.io.write("It's already locked."); return False
-            if action.noun.has_prop('open'): self.world.io.write("Close it first."); return False
-            if not action.second: self.world.io.write("Lock it with what?"); return False # Key
-            if action.noun.key_id != action.second.id and action.noun.key_id != action.second.name:
-                self.world.io.write("That key doesn't fit."); return False
-            return True
-
-        if verb == 'unlock':
-            if not action.noun: self.world.io.write("Unlock what?"); return False
-            if not action.noun.has_prop('lockable'): self.world.io.write("That doesn't have a lock."); return False
-            if not action.noun.has_prop('locked'): self.world.io.write("It's already unlocked."); return False
-            if not action.second: self.world.io.write("Unlock it with what?"); return False
-            if action.noun.key_id != action.second.id and action.noun.key_id != action.second.name:
-                self.world.io.write("That key doesn't fit."); return False
-            return True
-
-        if verb == 'wear':
-            if not action.noun: self.world.io.write("Wear what?"); return False
-            if not action.noun.has_prop('wearable'): self.world.io.write("You can't wear that."); return False
-            if action.noun.location_id != p.id: self.world.io.write("You aren't holding it."); return False
-            if action.noun.has_prop('worn'): self.world.io.write("You are already wearing it."); return False
-            return True
-
-        if verb == 'eat':
-            if not action.noun: self.world.io.write("Eat what?"); return False
-            if not action.noun.has_prop('edible'): self.world.io.write("That's not edible."); return False
-            if action.noun.location_id != p.id: self.world.io.write("You aren't holding it."); return False
-            return True
-
-        if verb == 'ask':
-             if not action.noun: self.world.io.write("Ask who?"); return False
-             if action.noun.kind != 'person': self.world.io.write("You can't talk to that."); return False
-             # NEW LOGIC: Check topic existence
-             if action.topic not in action.noun.topics:
-                 return "FALLBACK"
-             return True
-
-        if verb == 'tell':
-             if not action.noun: self.world.io.write("Tell who?"); return False
-             if action.noun.kind != 'person': self.world.io.write("You can't talk to that."); return False
-             return True
-
-        if verb == 'talk':
-             target = action.noun or action.second
-             if not target: self.world.io.write("Talk to who?"); return False
-             if target.kind != 'person': self.world.io.write("You can't talk to that."); return False
-             return True
-
-        if verb == 'push':
-            if not action.noun: self.world.io.write("Push what?"); return False
-            self.world.io.write("Nothing happens."); return False
-
-        if verb == 'pull':
-            if not action.noun: self.world.io.write("Pull what?"); return False
-            self.world.io.write("Nothing happens."); return False
-
-        if verb == 'go':
-             # Handled in parser usually
-             pass
-
+        if not action.noun: self.world.io.write("Take what?"); return False
+        if action.noun.id == p.id: self.world.io.write("You can't take yourself."); return False
+        if not action.noun.has_prop('portable'): self.world.io.write("That's fixed in place."); return False
+        if action.noun.location_id == p.id: self.world.io.write("You already have that."); return False
+        if not self.world.is_accessible(action.noun): self.world.io.write("You can't reach it."); return False
         return True
 
-    def carry_out(self, action):
-        verb = action.verb
+    def carry_out_take(self, action):
+        self.world.move_entity(action.noun.id, self.world.get_player().id)
+        if action.noun.has_prop('worn'): action.noun.set_prop('worn', False)
+
+    def report_take(self, action):
+        self.world.io.write("Taken.")
+
+    # --- DROP ---
+    def check_drop(self, action):
         p = self.world.get_player()
+        if not action.noun: self.world.io.write("Drop what?"); return False
+        if action.noun.location_id != p.id: self.world.io.write("You aren't carrying that."); return False
+        return True
 
-        if verb == 'take':
-            self.world.move_entity(action.noun.id, p.id)
-            # If it was worn, unset worn
-            if action.noun.has_prop('worn'): action.noun.set_prop('worn', False)
+    def carry_out_drop(self, action):
+        self.world.move_entity(action.noun.id, self.world.player_location)
+        if action.noun.has_prop('worn'): action.noun.set_prop('worn', False)
 
-        if verb == 'drop':
-            self.world.move_entity(action.noun.id, self.world.player_location)
-            if action.noun.has_prop('worn'): action.noun.set_prop('worn', False)
+    def report_drop(self, action):
+        self.world.io.write("Dropped.")
 
-        if verb == 'put':
-            self.world.move_entity(action.noun.id, action.second.id)
+    # --- PUT ---
+    def check_put(self, action):
+        p = self.world.get_player()
+        if not action.noun: self.world.io.write("Put what?"); return False
+        if not action.second: self.world.io.write("Put it where?"); return False
+        if action.noun.location_id != p.id: self.world.io.write("You aren't carrying that."); return False
+        if action.noun.id == action.second.id: self.world.io.write("You can't put something inside itself."); return False
+        if not action.second.has_prop('open') and not action.second.has_prop('enterable') and action.second.kind == 'container':
+            self.world.io.write(f"The {action.second.name} is closed."); return False
+        return True
 
-        if verb == 'enter':
-            self.world.move_entity(p.id, action.noun.id)
+    def carry_out_put(self, action):
+         self.world.move_entity(action.noun.id, action.second.id)
+         if action.noun.has_prop('worn'): action.noun.set_prop('worn', False)
 
-        if verb == 'open':
-            action.noun.set_prop('open', True)
+    def report_put(self, action):
+         self.world.io.write(f"You put the {action.noun.name} on/in the {action.second.name}.")
 
-        if verb == 'close':
-            action.noun.set_prop('open', False)
+    # --- ENTER ---
+    def check_enter(self, action):
+         if not action.noun: self.world.io.write("Enter what?"); return False
+         if not action.noun.has_prop('enterable'): self.world.io.write("That's not something you can enter."); return False
+         return True
 
-        if verb == 'lock':
-            action.noun.set_prop('locked', True)
+    def carry_out_enter(self, action):
+        self.world.move_entity(self.world.get_player().id, action.noun.id)
 
-        if verb == 'unlock':
-            action.noun.set_prop('locked', False)
+    def report_enter(self, action):
+        self.world.io.write(f"You get into the {action.noun.name}.")
 
-        if verb == 'wear':
-            action.noun.set_prop('worn', True)
+    # --- INVENTORY ---
+    def check_inventory(self, action): return True
+    def report_inventory(self, action): self.world.show_inventory()
 
-        if verb == 'eat':
-            # Destroy item
-            self.world.remove_entity(action.noun.id)
+    # --- LOOK ---
+    def check_look(self, action): return True
+    def report_look(self, action): self.world.look()
 
-    def report(self, action):
-        verb = action.verb
-        if verb == 'take': self.world.io.write("Taken.")
-        if verb == 'drop': self.world.io.write("Dropped.")
-        if verb == 'put': self.world.io.write(f"You put the {action.noun.name} on/in the {action.second.name}.")
-        if verb == 'open':
-            self.world.io.write("Opened.")
-            self.world.io.write(action.noun.get_description())
-        if verb == 'close': self.world.io.write("Closed.")
-        if verb == 'lock': self.world.io.write("Locked.")
-        if verb == 'unlock': self.world.io.write("Unlocked.")
-        if verb == 'wear': self.world.io.write("You put it on.")
-        if verb == 'eat': self.world.io.write("You eat it. Delicious.")
-        if verb == 'enter': self.world.io.write(f"You get into the {action.noun.name}.")
+    # --- EXAMINE ---
+    def check_examine(self, action):
+        if not action.noun: self.world.io.write("Examine what?"); return False
+        return True
+    def report_examine(self, action):
+        self.world.io.write(action.noun.get_description())
 
-        if verb == 'ask':
-             topic = action.topic
-             resp = action.noun.topics.get(topic, "They have nothing to say about that.")
-             self.world.io.write(f"\\"{resp}\\"")
+    # --- OPEN ---
+    def check_open(self, action):
+        if not action.noun: self.world.io.write("Open what?"); return False
+        if not action.noun.has_prop('openable'): self.world.io.write("That's not something you can open."); return False
+        if action.noun.has_prop('locked'): self.world.io.write("It is locked."); return False
+        if action.noun.has_prop('open'): self.world.io.write("It is already open."); return False
+        return True
 
-        if verb == 'tell':
-             # Simple echo for now
-             self.world.io.write(f"You tell {action.noun.name} about {action.topic}. They listen politely.")
+    def carry_out_open(self, action):
+        action.noun.set_prop('open', True)
 
-        if verb == 'talk':
-             target = action.noun or action.second
-             self.world.io.write(f"To converse, try 'ask {target.name} about [topic]' or 'tell {target.name} about [topic]'.")
+    def report_open(self, action):
+        self.world.io.write("Opened.")
+        self.world.io.write(action.noun.get_description())
 
-        if verb == 'look':
-            self.world.look()
+    # --- CLOSE ---
+    def check_close(self, action):
+        if not action.noun: self.world.io.write("Close what?"); return False
+        if not action.noun.has_prop('openable'): self.world.io.write("That's not something you can close."); return False
+        if not action.noun.has_prop('open'): self.world.io.write("It is already closed."); return False
+        return True
 
-        if verb == 'inventory':
-            self.world.show_inventory()
+    def carry_out_close(self, action):
+        action.noun.set_prop('open', False)
 
-        if verb == 'examine':
-            self.world.io.write(action.noun.get_description())
+    def report_close(self, action):
+        self.world.io.write("Closed.")
+
+    # --- LOCK ---
+    def check_lock(self, action):
+        if not action.noun: self.world.io.write("Lock what?"); return False
+        if not action.noun.has_prop('lockable'): self.world.io.write("That doesn't have a lock."); return False
+        if action.noun.has_prop('locked'): self.world.io.write("It's already locked."); return False
+        if action.noun.has_prop('open'): self.world.io.write("Close it first."); return False
+        if not action.second: self.world.io.write("Lock it with what?"); return False
+        if action.noun.key_id != action.second.id and action.noun.key_id != action.second.name:
+            self.world.io.write("That key doesn't fit."); return False
+        return True
+
+    def carry_out_lock(self, action):
+        action.noun.set_prop('locked', True)
+
+    def report_lock(self, action):
+        self.world.io.write("Locked.")
+
+    # --- UNLOCK ---
+    def check_unlock(self, action):
+        if not action.noun: self.world.io.write("Unlock what?"); return False
+        if not action.noun.has_prop('lockable'): self.world.io.write("That doesn't have a lock."); return False
+        if not action.noun.has_prop('locked'): self.world.io.write("It's already unlocked."); return False
+        if not action.second: self.world.io.write("Unlock it with what?"); return False
+        if action.noun.key_id != action.second.id and action.noun.key_id != action.second.name:
+            self.world.io.write("That key doesn't fit."); return False
+        return True
+
+    def carry_out_unlock(self, action):
+        action.noun.set_prop('locked', False)
+
+    def report_unlock(self, action):
+        self.world.io.write("Unlocked.")
+
+    # --- WEAR ---
+    def check_wear(self, action):
+        p = self.world.get_player()
+        if not action.noun: self.world.io.write("Wear what?"); return False
+        if not action.noun.has_prop('wearable'): self.world.io.write("You can't wear that."); return False
+        if action.noun.location_id != p.id: self.world.io.write("You aren't holding it."); return False
+        if action.noun.has_prop('worn'): self.world.io.write("You are already wearing it."); return False
+        return True
+
+    def carry_out_wear(self, action):
+        action.noun.set_prop('worn', True)
+
+    def report_wear(self, action):
+        self.world.io.write("You put it on.")
+
+    # --- EAT ---
+    def check_eat(self, action):
+        p = self.world.get_player()
+        if not action.noun: self.world.io.write("Eat what?"); return False
+        if not action.noun.has_prop('edible'): self.world.io.write("That's not edible."); return False
+        if action.noun.location_id != p.id: self.world.io.write("You aren't holding it."); return False
+        return True
+
+    def carry_out_eat(self, action):
+        self.world.remove_entity(action.noun.id)
+
+    def report_eat(self, action):
+        self.world.io.write("You eat it. Delicious.")
+
+    # --- ASK ---
+    def check_ask(self, action):
+         if not action.noun: self.world.io.write("Ask who?"); return False
+         if action.noun.kind != 'person': self.world.io.write("You can't talk to that."); return False
+         if action.topic not in action.noun.topics:
+             self.world.io.write("They have nothing to say about that.")
+             return False
+         return True
+
+    def report_ask(self, action):
+         resp = action.noun.topics.get(action.topic, "")
+         self.world.io.write(f'"{resp}"')
+
+    # --- TELL ---
+    def check_tell(self, action):
+         if not action.noun: self.world.io.write("Tell who?"); return False
+         if action.noun.kind != 'person': self.world.io.write("You can't talk to that."); return False
+         return True
+
+    def report_tell(self, action):
+         self.world.io.write(f"You tell {action.noun.name} about {action.topic}. They listen politely.")
+
+    # --- TALK ---
+    def check_talk(self, action):
+         target = action.noun or action.second
+         if not target: self.world.io.write("Talk to who?"); return False
+         if target.kind != 'person': self.world.io.write("You can't talk to that."); return False
+         return True
+
+    def report_talk(self, action):
+         target = action.noun or action.second
+         self.world.io.write(f"To converse, try 'ask {target.name} about [topic]' or 'tell {target.name} about [topic]'.")
+
+    # --- PUSH ---
+    def check_push(self, action):
+        if not action.noun: self.world.io.write("Push what?"); return False
+        return True
+
+    def report_push(self, action):
+        self.world.io.write("Nothing happens.")
+
+    # --- PULL ---
+    def check_pull(self, action):
+        if not action.noun: self.world.io.write("Pull what?"); return False
+        return True
+
+    def report_pull(self, action):
+        self.world.io.write("Nothing happens.")
+
+    # --- GO ---
+    def check_go(self, action): pass
 
 class Action:
     def __init__(self, verb, noun=None, second=None, topic=None):
@@ -569,7 +562,6 @@ class World:
         self.rulebook = Rulebook(self)
         self.history = []
 
-        # Create Player
         self.player_id = 'player'
         self.entities['player'] = Person('player', {'name': 'yourself', 'location': self.player_location}, self)
 
@@ -587,27 +579,19 @@ class World:
             if eid in self.entities: self.entities[eid].load_state(s)
 
     def _load_data(self, data):
-        # 1. Load Rooms
         for scene in data.get('scenes', []):
             r = Room(scene['id'], scene, self)
             self.entities[r.id] = r
-
-            # Contents
             for item in scene.get('contents', []):
                 self._load_item(item, r.id)
 
-        # 2. Doors
         for d_data in data.get('doors', []):
             d = Door(d_data['id'], d_data, self)
             self.entities[d.id] = d
-            # Doors are technically "in" the rooms they connect, but visually distinct.
-            # We handle them by reference in Room.exits usually.
 
-        # 3. Off-stage
         for item in data.get('off_stage', []):
             self._load_item(item, 'off-stage')
 
-        # 4. Wire Connections
         for scene in data.get('scenes', []):
             r = self.entities[scene['id']]
             if 'exits' in scene:
@@ -621,13 +605,10 @@ class World:
 
                     if door_id:
                         r.exits[dir] = door_id
-                        # Update door connections if not fully set
                         d = self.entities[door_id]
                         d.connections[r.id] = dir
-                        if target:
-                            # Also register the target side so we can cross
-                            if target not in d.connections:
-                                d.connections[target] = 'unknown'
+                        if target and target not in d.connections:
+                             d.connections[target] = 'unknown'
                     elif target:
                         r.exits[dir] = target
 
@@ -641,24 +622,20 @@ class World:
         elif kind == 'edible': cls = Thing; data['properties'] = data.get('properties', {}); data['properties']['edible'] = True
         else: cls = Thing
 
-        # Initial location
         data['location'] = loc_id
         obj = cls(data['id'], data, self)
         self.entities[obj.id] = obj
 
-        # Recursive contents
         if 'contents' in data:
             for child in data['contents']:
                 self._load_item(child, obj.id)
 
-        # Register in parent
         self.move_entity(obj.id, loc_id)
 
     def get_player(self):
         return self.entities['player']
 
     def get_player_room(self):
-        # The player is in a room. Or in a container in a room.
         p = self.get_player()
         loc = p.location_id
         while loc in self.entities and self.entities[loc].kind != 'room':
@@ -668,13 +645,9 @@ class World:
     def move_entity(self, obj_id, dest_id):
         if obj_id not in self.entities: return
         obj = self.entities[obj_id]
-
-        # Remove from old
         if obj.location_id and obj.location_id in self.entities:
              try: self.entities[obj.location_id].contents.remove(obj_id)
              except: pass
-
-        # Add to new
         obj.location_id = dest_id
         if dest_id in self.entities:
             self.entities[dest_id].contents.append(obj_id)
@@ -695,30 +668,17 @@ class World:
             if effect['target'] in self.entities:
                 self.entities[effect['target']].set_prop(effect['property'], effect['value'])
 
-    # --- Visibility & Accessibility ---
-
     def get_scope(self):
-        # Everything visible to player
-        # 1. Player inventory
-        # 2. Room contents
-        # 3. Recursive transparency
         scope = []
         p = self.get_player()
-
-        # Inventory
         scope.extend(self._get_contents_recursive(p))
-
-        # Room
         room = self.get_player_room()
         if room:
             scope.append(room)
             scope.extend(self._get_contents_recursive(room))
-
-            # Doors
             for dir, target_id in room.exits.items():
                 if target_id in self.entities:
                     scope.append(self.entities[target_id])
-
         return scope
 
     def _get_contents_recursive(self, parent):
@@ -726,8 +686,6 @@ class World:
         for c_id in parent.contents:
             child = self.entities[c_id]
             res.append(child)
-            # Recursion logic:
-            # If open container, or supporter, or transparent container
             see_inside = False
             if child.kind == 'supporter': see_inside = True
             elif child.kind == 'container':
@@ -738,9 +696,6 @@ class World:
         return res
 
     def is_accessible(self, obj):
-        # Can the player touch it?
-        # Simplified: If it's in scope and not inside a closed transparent container (unless that container is in inventory?)
-        # For now, assume Scope == Touch for most things, except strict closed containers.
         if obj.location_id == self.player_id: return True
         parent_id = obj.location_id
         while parent_id and parent_id != self.player_id and parent_id != self.get_player_room().id:
@@ -753,16 +708,13 @@ class World:
     def find_in_scope(self, name):
         if not name: return None
         scope = self.get_scope()
-        # 1. Exact match
         for ent in scope:
             if ent.match_name(name): return ent
-        # 2. Partial match (simple)
         for ent in scope:
             if name in ent.name.lower(): return ent
         return None
 
     def get_current_context(self):
-        # Gather visible entities and their relevant data (topics for persons)
         room = self.get_player_room()
         scope = self.get_scope()
 
@@ -786,15 +738,11 @@ class World:
 
         return "\\n".join(context_lines)
 
-    # --- UI ---
-
     def look(self):
         room = self.get_player_room()
         self.io.write(f"**{room.name}**")
         self.io.write(room.description)
 
-        # List contents
-        # Don't list scenery or player
         visible = [self.entities[i] for i in room.contents if i != self.player_id and not self.entities[i].has_prop('scenery')]
 
         if visible:
@@ -812,10 +760,9 @@ class World:
                 desc_list.append(desc)
             self.io.write("You see: " + ", ".join(desc_list))
 
-        # Exits
         exits_str = []
         for d, t in room.exits.items():
-            if t in self.entities: # It's a door
+            if t in self.entities:
                 door = self.entities[t]
                 exits_str.append(f"{d} ({door.name})")
             else:
@@ -840,8 +787,6 @@ class World:
         room = self.get_player_room()
         if direction in room.exits:
             target = room.exits[direction]
-
-            # If target is a door, check if open
             if target in self.entities and self.entities[target].kind == 'door':
                 door = self.entities[target]
                 if not door.has_prop('open'):
@@ -851,9 +796,6 @@ class World:
                     else:
                          self.io.write(f"The {door.name} is closed.")
                          return
-                # Find destination from door connections
-                # door.connections = {roomA: dirA, roomB: dirB}
-                # We want the 'other' room
                 for r_id in door.connections:
                     if r_id != room.id:
                         self.move_entity(self.player_id, r_id)
@@ -861,7 +803,6 @@ class World:
                         return
                 self.io.write("The door leads nowhere?")
             else:
-                # Direct connection
                 self.move_entity(self.player_id, target)
                 self.look()
         else:
@@ -871,21 +812,13 @@ class World:
         text = text.lower().strip()
         if not text: return
 
-        # Pre-process: remove stopwords 'the', 'a', 'an'
         for w in ['the ', 'a ', 'an ']:
             text = text.replace(f" {w}", " ")
             if text.startswith(w): text = text[len(w):]
 
-        # Handle 'talk to'
         text = text.replace('talk to ', 'talk ')
 
         self.io.log_input(text)
-
-        # Save state for UNDO before any state-changing command
-        # (For now, we save before EVERY command that isn't meta/undo to be safe,
-        # or we rely on the command handling to know if it changes state.
-        # A simple approach: save before everything, but that's heavy.
-        # Better: Save before processing, unless it's a meta command.)
 
         meta_commands = ['save', 'load', 'undo', 'look', 'l', 'inventory', 'i', 'help']
         is_meta = text in meta_commands or text.split()[0] in meta_commands
@@ -894,14 +827,12 @@ class World:
             self.history.append(self.save_state_to_memory())
             if len(self.history) > 10: self.history.pop(0)
 
-        # 1. Directions
         dirs = {'n':'north','s':'south','e':'east','w':'west','u':'up','d':'down'}
         if text in dirs: text = dirs[text]
         if text in ['north','south','east','west','up','down']:
             self.move_player(text)
             return
 
-        # Handle 'go [dir]'
         if text.startswith("go ") or text.startswith("walk "):
             parts = text.split(" ", 1)
             if len(parts) > 1:
@@ -911,7 +842,6 @@ class World:
                     self.move_player(direction)
                     return
 
-        # 2. Tokenize
         tokens = text.split()
         verb = tokens[0]
 
@@ -919,7 +849,6 @@ class World:
         if verb == 'read': verb = 'examine'
         if verb == 'shift' or verb == 'shove': verb = 'push'
 
-        # Handle 'look at/in' -> 'examine'
         if verb == 'look' and len(tokens) > 1:
             if ' around' in text:
                 verb = 'look'
@@ -936,15 +865,11 @@ class World:
             elif ' under ' in text:
                 verb = 'examine'
                 text = text.replace('look under ', 'examine ')
-
-            # Re-tokenize if changed
             if verb == 'examine':
                 tokens = text.split()
 
-        # Simple verbs
         if verb == 'undo':
-            if not self.history:
-                self.io.write("Nothing to undo.")
+            if not self.history: self.io.write("Nothing to undo.")
             else:
                 state = self.history.pop()
                 self.load_state_from_memory(state)
@@ -959,12 +884,6 @@ class World:
         if verb == 'load': self.load_game(); return
         if verb == 'menu': self.io.write("Exiting to menu..."); return "menu"
 
-        # Complex verbs
-        # Patterns:
-        # VERB NOUN (take sword)
-        # VERB NOUN PREP NOUN (put sword in sack)
-        # ASK NOUN ABOUT TOPIC
-
         if verb == 'ask' or verb == 'tell':
             if ' about ' in text:
                 try:
@@ -974,7 +893,6 @@ class World:
                         return
                 except: pass
 
-        # Prepositions for PUT / UNLOCK
         preps = [' in ', ' on ', ' with ', ' to ']
         prep_found = None
         for p in preps:
@@ -983,22 +901,18 @@ class World:
                  break
 
         if prep_found:
-            # SVOPO
             try:
                 parts = text.split(f" {prep_found} ", 1)
                 verb_phrase = parts[0].split(' ', 1)
                 verb = verb_phrase[0]
                 noun_str = verb_phrase[1] if len(verb_phrase) > 1 else ""
                 second_str = parts[1]
-
                 noun = self.find_in_scope(noun_str)
                 second = self.find_in_scope(second_str)
-
                 if self.rulebook.process(Action(verb, noun=noun, second=second)):
                     return
             except: pass
 
-        # SVO
         if len(tokens) >= 1:
             noun_str = " ".join(tokens[1:])
             noun = self.find_in_scope(noun_str)
@@ -1006,18 +920,27 @@ class World:
                 if self.rulebook.process(Action(verb, noun=noun)):
                     return
 
-        # AI Fallback
-        valid_cmds = [
-            "look", "inventory", "examine [item]",
-            "take [item]", "drop [item]",
-            "put [item] in [container]", "put [item] on [supporter]",
-            "open [item]", "close [item]",
-            "lock [item] with [key]", "unlock [item] with [key]",
-            "wear [item]", "eat [item]", "enter [item]",
-            "push [item]", "pull [item]",
-            "go [direction]",
-            "ask [person] about [topic]", "tell [person] about [topic]"
-        ]
+        # AI Fallback - Dynamic
+        std_verbs = set()
+        for m in dir(self.rulebook):
+            if m.startswith("check_"):
+                std_verbs.add(m[6:])
+
+        for e in self.entities.values():
+            for rule in e.interactions:
+                if 'verb' in rule: std_verbs.add(rule['verb'])
+
+        valid_cmds = []
+        for v in std_verbs:
+             valid_cmds.append(f"{v} [noun]")
+
+        valid_cmds.append("put [item] in [container]")
+        valid_cmds.append("put [item] on [supporter]")
+        valid_cmds.append("lock [item] with [key]")
+        valid_cmds.append("unlock [item] with [key]")
+        valid_cmds.append("ask [person] about [topic]")
+        valid_cmds.append("tell [person] about [topic]")
+        valid_cmds.append("go [direction]")
 
         context = self.get_current_context()
         history = self.io.get_history_str()
@@ -1037,6 +960,7 @@ class World:
         if win and win.get('type') == 'location':
             if self.get_player_room().id == win['target']:
                 self.io.write("\\n*** YOU HAVE WON ***")
+                self.io.write("*** The End ***")
                 return True
         return False
 
@@ -1141,14 +1065,11 @@ def compile_game(yaml_file):
 
     base_name = os.path.splitext(os.path.basename(yaml_file))[0]
 
-    # Log purpose if present
     if 'purpose' in data:
         print(f"Compiling '{data.get('title', 'Untitled')}' - Purpose: {data['purpose']}")
 
-    # Generate Game Code
     game_code = generate_game_code(data, base_name)
 
-    # Ensure directories exist
     os.makedirs('stories/games', exist_ok=True)
     os.makedirs('tests/stories', exist_ok=True)
 
@@ -1157,12 +1078,8 @@ def compile_game(yaml_file):
         f.write(game_code)
     print(f"Generated {game_filename}")
 
-    # Generate Test Code
-    # Module name is just the filename without extension
     module_name = "game_" + base_name
-
     test_code = generate_test_code(data, module_name, base_name)
-
     test_filename = os.path.join('tests/stories', "test_" + base_name + ".py")
     with open(test_filename, 'w') as f:
         f.write(test_code)

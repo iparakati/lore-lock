@@ -1,0 +1,26 @@
+title: "Feature Test: Enter"
+purpose: "Verify entering containers/vehicles."
+
+scenes:
+  - id: "Garage"
+    name: "Garage"
+    contents:
+      - id: "car"
+        kind: "container"
+        name: "Sports Car"
+        description: "A fast car."
+        properties: { enterable: true, open: true }
+      - id: "box"
+        kind: "container"
+        name: "Cardboard Box"
+        properties: { enterable: false, open: true }
+
+start_room: "Garage"
+
+test_sequence:
+  - "enter box"
+  - "enter car"
+
+win_condition:
+  type: "location"
+  target: "Garage"
