@@ -23,17 +23,21 @@ DM_CONFIG_FILE = "dm_config.yaml"
 # ==========================================
 class GameIO:
     def __init__(self):
-        self.history = []
+        self.history = [] # For context context
+        self.last_input = None
+        self.current_turn_output = []
 
     def write(self, message):
         print(message)
-        self.history.append("System: " + str(message))
-        # Keep last 5 interactions pairs (10 lines)
-        if len(self.history) > 10:
-             self.history = self.history[-10:]
+        self.current_turn_output.append(str(message))
 
     def log_input(self, text):
-        self.history.append("User: " + str(text))
+        # Archive previous turn
+        if self.last_input is not None:
+             self.history = ["User: " + self.last_input, "System: " + " ".join(self.current_turn_output)]
+
+        self.last_input = text
+        self.current_turn_output = []
 
     def get_history_str(self):
         return "\\n".join(self.history)
@@ -929,12 +933,13 @@ class World:
         if len(tokens) > 1:
             noun_str = " ".join(tokens[1:])
             noun = self.find_in_scope(noun_str)
-            if self.rulebook.process(Action(verb, noun=noun)):
-                return
+            if noun:
+                if self.rulebook.process(Action(verb, noun=noun)):
+                    return
 
         # AI Fallback
         valid_cmds = [
-            "look", "inventory",
+            "look", "inventory", "examine [item]",
             "take [item]", "drop [item]",
             "put [item] in [container]", "put [item] on [supporter]",
             "open [item]", "close [item]",
@@ -948,8 +953,11 @@ class World:
 
         mapped = self.ai.map_command(text, valid_cmds, history, context)
         if mapped:
-            self.io.write(f"[AI Interpreted: {mapped}]")
-            self.parse(mapped)
+            if mapped.lower().strip() == text:
+                self.io.write("I understand, but I can't do that right now.")
+            else:
+                self.io.write(f"[AI Interpreted: {mapped}]")
+                self.parse(mapped)
         else:
             self.io.write("I didn't understand that.")
 
